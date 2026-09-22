@@ -108,11 +108,37 @@ The top status bar has four touch buttons:
 
 ## Touch calibration
 
-The raw-to-screen touch mapping constants (`TOUCH_RAW_X_MIN/MAX`,
-`TOUCH_RAW_Y_MIN/MAX` in `Config.h`) are common defaults for this board. If
-touches feel offset or mirrored on your particular panel, adjust those
-constants, or swap/flip the axes in `TouchInput::getPoint()`
-(`TouchInput.cpp`).
+The XPT2046 digitizer on this board sits in its native portrait
+orientation regardless of the display's landscape rotation, so its raw X
+and Y readings come in swapped relative to the screen. `Config.h` accounts
+for this by default (`TOUCH_SWAP_XY 1`). Symptom of this being wrong: only
+touches in one narrow band (e.g. just the rightmost status-bar button)
+register, while the rest of that same row does nothing — that's a swapped-
+axis bug, not a fine calibration offset.
+
+If, after this default, touches still feel off, work through it in order:
+
+1. **Wrong axis entirely** (e.g. dragging left-right on screen moves the
+   scroll position, which should only respond to up-down drags) — flip
+   `TOUCH_SWAP_XY` to `0`.
+2. **Right axis, but mirrored** (e.g. tapping the left button hits the
+   right one instead, or the top of the screen responds to bottom taps) —
+   set `TOUCH_INVERT_X` and/or `TOUCH_INVERT_Y` to `1` as needed.
+3. **Close but offset** — adjust `TOUCH_RAW_X_MIN/MAX` and
+   `TOUCH_RAW_Y_MIN/MAX` to match your panel's actual raw range.
+
+To see live numbers while adjusting any of the above, set
+`TOUCH_DEBUG_SERIAL` to `1` in `Config.h`, re-upload, and open the Serial
+Monitor at 115200 baud. Each touch prints its raw XPT2046 reading and the
+resulting mapped screen coordinate, e.g.:
+
+```
+touch raw=(612,3421) mapped=(215,17)
+```
+
+Tap the four screen corners and check the mapped coordinates land near
+`(0,0)`, `(319,0)`, `(0,239)`, and `(319,239)` respectively; use any
+mismatch to tell which of the three adjustments above you still need.
 
 ## Project layout
 

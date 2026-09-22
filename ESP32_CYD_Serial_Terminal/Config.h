@@ -47,6 +47,22 @@
 #define TOUCH_RAW_Y_MIN      240
 #define TOUCH_RAW_Y_MAX      3800
 
+// The XPT2046 digitizer on this board is mounted in its native portrait
+// orientation, independent of the ILI9341's rotation, so its raw X/Y axes
+// come in swapped relative to the landscape (rotation 1) screen: a raw X
+// reading tracks the screen's vertical position and a raw Y reading tracks
+// the screen's horizontal position. If touches land on the wrong axis,
+// set this to 0. If they land mirrored on one axis, flip the matching
+// TOUCH_INVERT_* below instead of touching the mapping code.
+#define TOUCH_SWAP_XY         1
+#define TOUCH_INVERT_X        0
+#define TOUCH_INVERT_Y        0
+
+// Set to 1 and open the Serial Monitor (115200) to print each touch's raw
+// and mapped coordinates - handy for re-deriving TOUCH_RAW_*_MIN/MAX or
+// checking the swap/invert flags above against your specific panel.
+#define TOUCH_DEBUG_SERIAL    0
+
 // ---------------------------------------------------------------------------
 // microSD card slot - shares the TFT's VSPI bus (MOSI/MISO/SCLK), with its
 // own chip-select line.
