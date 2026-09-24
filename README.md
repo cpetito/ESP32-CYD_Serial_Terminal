@@ -121,7 +121,7 @@ order:
 
 1. **Wrong axis entirely** (e.g. dragging left-right on screen moves the
    scroll position, which should only respond to up-down drags) — flip
-   `TOUCH_SWAP_XY` to `0`.
+   `TOUCH_SWAP_XY` to `1`.
 2. **Right axis, but mirrored** (e.g. tapping the left button hits the
    right one instead, or the top of the screen responds to bottom taps) —
    set `TOUCH_INVERT_X` and/or `TOUCH_INVERT_Y` to `1` as needed.
@@ -137,9 +137,43 @@ resulting mapped screen coordinate, e.g.:
 touch raw=(612,3421) mapped=(215,17)
 ```
 
+A tap that jitters past `DRAG_THRESHOLD_PX` during the first
+`DRAG_MIN_HOLD_MS` of contact (both in the `.ino`) is still treated as a
+tap, not a drag, to absorb the noisy first reading or two typical of a
+resistive panel settling. If taps are still occasionally swallowed on your
+panel, raising `DRAG_THRESHOLD_PX` (pixels) or `DRAG_MIN_HOLD_MS`
+(milliseconds) further is safe — a real drag gesture moves much further
+over a much longer hold than either guards against.
+
 Tap the four screen corners and check the mapped coordinates land near
 `(0,0)`, `(319,0)`, `(0,239)`, and `(319,239)` respectively; use any
 mismatch to tell which of the three adjustments above you still need.
+
+## SD card not detected
+
+`SDLogger::mount()` (called when you tap REC) now logs exactly where it
+failed to the USB Serial Monitor (115200 baud) — open it and tap REC to
+see one of:
+
+- **`SD.begin() failed`** — the SPI transaction to the card itself never
+  succeeded. Check: `SD_CS_PIN` in `Config.h` (`5`) actually matches your
+  board revision (a handful of CYD clones wire the microSD CS to a
+  different pin — verify with a multimeter/continuity check against the
+  card slot if this persists), the card is fully seated (listen for the
+  click), and that nothing else is asserting the shared VSPI bus's CS
+  lines at the same time.
+- **`no card was detected (cardType() == CARD_NONE)`** — the SPI
+  transaction succeeded but the card itself didn't respond, almost always
+  a seating issue: reseat the card, try a different one, and confirm it's
+  formatted FAT16/FAT32 (not exFAT).
+- **`mounted OK (cardType=..., N MB)`** — the card mounted fine; if REC
+  still doesn't work from here, the failure is in creating the session
+  file itself, not detecting the card.
+
+`mount()` also now uses a conservative 4MHz SPI clock (down from the SD
+library's default) since the CYD's TFT/SD shared bus can be marginal at
+higher speeds — a worthwhile trade for a text logger that isn't
+throughput-bound.
 
 ## Project layout
 

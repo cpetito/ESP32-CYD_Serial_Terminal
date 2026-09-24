@@ -41,9 +41,18 @@ static bool recording = false;
 static bool touchWasDown = false;
 static int16_t touchDownX = 0, touchDownY = 0;
 static int16_t touchLastY = 0;
+static unsigned long touchDownMs = 0;
 static int32_t dragAccumPx = 0;
 static bool touchDragged = false;
-static const int16_t DRAG_THRESHOLD_PX = 4;
+
+// A resistive panel's very first reading or two after finger contact is
+// often noisy while pressure settles, so a tap can easily jitter past a
+// tiny pixel threshold and get misread as a drag (suppressing the tap).
+// Requiring a bit of both distance AND elapsed hold time before committing
+// to "this is a drag" filters that out without blunting real swipes, which
+// move much further than this over a much longer hold.
+static const int16_t DRAG_THRESHOLD_PX = 12;
+static const unsigned long DRAG_MIN_HOLD_MS = 60;
 
 static void toggleRecording() {
   if (recording) {
@@ -116,13 +125,16 @@ static void pollTouch() {
     touchDownX = tx;
     touchDownY = ty;
     touchLastY = ty;
+    touchDownMs = millis();
     dragAccumPx = 0;
     touchDragged = false;
   } else if (touched && touchWasDown) {
     int16_t dy = ty - touchLastY;
     touchLastY = ty;
 
-    if (mode == MODE_TERMINAL && (touchDragged || abs(ty - touchDownY) >= DRAG_THRESHOLD_PX)) {
+    bool heldLongEnough = (millis() - touchDownMs) >= DRAG_MIN_HOLD_MS;
+    if (mode == MODE_TERMINAL && (touchDragged ||
+        (heldLongEnough && abs(ty - touchDownY) >= DRAG_THRESHOLD_PX))) {
       touchDragged = true;
       dragAccumPx += dy;
       int16_t lineHeightPx = CHAR_H * TERM_TEXT_SIZE;

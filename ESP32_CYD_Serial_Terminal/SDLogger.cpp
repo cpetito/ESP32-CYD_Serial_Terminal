@@ -7,18 +7,33 @@ bool SDLogger::mount() {
 
   // TFT_eSPI already owns the VSPI bus (SCLK/MOSI/MISO); make sure those
   // pins are explicitly (re)configured with the SD card's CS line before
-  // handing the bus to the SD library.
+  // handing the bus to the SD library. SD.end() first guarantees a clean
+  // re-init if a prior mount attempt failed partway through.
+  SD.end();
   SPI.begin(TFT_SCLK_PIN, TFT_MISO_PIN, TFT_MOSI_PIN, SD_CS_PIN);
 
-  if (!SD.begin(SD_CS_PIN, SPI)) {
+  // A lower SPI clock than the SD library's 4MHz default trades a little
+  // speed for reliability on the CYD's shared, sometimes marginal SD
+  // wiring - well worth it for a text logger that isn't throughput bound.
+  if (!SD.begin(SD_CS_PIN, SPI, 4000000)) {
+    Serial.println(F("SD: SD.begin() failed - check card is inserted/seated, "
+                      "formatted FAT16/FAT32, and that SD_CS_PIN in Config.h "
+                      "matches your board revision."));
     mounted_ = false;
     return false;
   }
 
-  if (SD.cardType() == CARD_NONE) {
+  uint8_t cardType = SD.cardType();
+  if (cardType == CARD_NONE) {
+    Serial.println(F("SD: SD.begin() succeeded but no card was detected "
+                      "(cardType() == CARD_NONE) - likely not fully seated."));
     mounted_ = false;
     return false;
   }
+
+  Serial.printf("SD: mounted OK (cardType=%u, %llu MB)\n",
+                (unsigned)cardType,
+                (unsigned long long)(SD.cardSize() / (1024ULL * 1024ULL)));
 
   if (!SD.exists(SD_LOG_DIR)) {
     SD.mkdir(SD_LOG_DIR);
@@ -40,6 +55,7 @@ bool SDLogger::startSession(Settings &settings, String &outFileName) {
 
   file_ = SD.open(currentFileName_, FILE_WRITE);
   if (!file_) {
+    Serial.printf("SD: failed to open %s for writing\n", currentFileName_.c_str());
     return false;
   }
 
