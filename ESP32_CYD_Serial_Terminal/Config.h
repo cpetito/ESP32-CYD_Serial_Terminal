@@ -47,14 +47,14 @@
 #define TOUCH_RAW_Y_MIN      240
 #define TOUCH_RAW_Y_MAX      3800
 
-// The XPT2046 digitizer on this board is mounted in its native portrait
-// orientation, independent of the ILI9341's rotation, so its raw X/Y axes
-// come in swapped relative to the landscape (rotation 1) screen: a raw X
-// reading tracks the screen's vertical position and a raw Y reading tracks
-// the screen's horizontal position. If touches land on the wrong axis,
-// set this to 0. If they land mirrored on one axis, flip the matching
-// TOUCH_INVERT_* below instead of touching the mapping code.
-#define TOUCH_SWAP_XY         1
+// Whether the touch controller's raw X/Y axes need to be swapped or
+// mirrored to line up with the landscape (rotation 1) screen. Confirmed
+// via TOUCH_DEBUG_SERIAL readings that this board's raw p.x tracks screen
+// X and raw p.y tracks screen Y directly - no swap. Left here as a knob
+// in case a different panel/board revision needs it: if touches land on
+// the wrong axis, set TOUCH_SWAP_XY to 1; if the right axis but mirrored,
+// flip the matching TOUCH_INVERT_* instead of editing the mapping code.
+#define TOUCH_SWAP_XY         0
 #define TOUCH_INVERT_X        0
 #define TOUCH_INVERT_Y        0
 
@@ -79,7 +79,7 @@
 #define TERM_TEXT_SIZE       1     // GLCD font (font 1), 6x8 px per glyph at size 1
 #define CHAR_W                6
 #define CHAR_H                8
-#define STATUS_BAR_HEIGHT    18
+#define STATUS_BAR_HEIGHT    32   // taller than one glyph row - forgiving touch target
 
 // ---------------------------------------------------------------------------
 // Colors

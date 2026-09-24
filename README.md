@@ -108,15 +108,16 @@ The top status bar has four touch buttons:
 
 ## Touch calibration
 
-The XPT2046 digitizer on this board sits in its native portrait
-orientation regardless of the display's landscape rotation, so its raw X
-and Y readings come in swapped relative to the screen. `Config.h` accounts
-for this by default (`TOUCH_SWAP_XY 1`). Symptom of this being wrong: only
-touches in one narrow band (e.g. just the rightmost status-bar button)
-register, while the rest of that same row does nothing — that's a swapped-
-axis bug, not a fine calibration offset.
+By default the raw XPT2046 X/Y readings map directly to the screen (no
+swap, no mirroring) — confirmed against this board via `TOUCH_DEBUG_SERIAL`
+readings, so `TOUCH_SWAP_XY`/`TOUCH_INVERT_X`/`TOUCH_INVERT_Y` in `Config.h`
+all default to off. The main source of missed taps in practice is a small
+Y-axis offset in the default `TOUCH_RAW_Y_MIN/MAX` calibration, which
+`STATUS_BAR_HEIGHT` (32px, taller than a single text row) is sized to
+tolerate.
 
-If, after this default, touches still feel off, work through it in order:
+If touches still feel off on your specific panel, work through it in
+order:
 
 1. **Wrong axis entirely** (e.g. dragging left-right on screen moves the
    scroll position, which should only respond to up-down drags) — flip
