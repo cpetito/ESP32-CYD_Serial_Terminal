@@ -5,6 +5,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <SPI.h>
 #include <SD.h>
 #include "Config.h"
 #include "Settings.h"
@@ -34,6 +35,13 @@ public:
   String statusText() const;
 
 private:
+  // A dedicated hardware SPI peripheral, exclusively the SD card's own -
+  // not the global default `SPI` object, which TFT_eSPI already owns. See
+  // TouchInput.h for why this board needs each of its three SPI devices
+  // on its own bus (two get a hardware peripheral each; touch is
+  // bit-banged) rather than reusing one peripheral with swapped pins.
+  SPIClass sdSPI_ = SPIClass(HSPI);
+
   bool mounted_ = false;
   File file_;
   String currentFileName_;

@@ -1,19 +1,22 @@
 // SDLogger.cpp
 #include "SDLogger.h"
-#include <SPI.h>
 
 bool SDLogger::mount() {
   if (mounted_) return true;
 
-  // SD.end() first guarantees a clean re-init if a prior mount attempt
-  // failed partway through.
+  // sdSPI_ is a dedicated HSPI peripheral, exclusively the SD card's own -
+  // unlike the previous approach of re-begin()'ing the global `SPI` object
+  // (VSPI, already owned by TFT_eSPI) with the SD card's different pins,
+  // which was silently rerouting that shared physical peripheral out from
+  // under the TFT and corrupting writes. SD.end() first guarantees a
+  // clean re-init if a prior mount attempt failed partway through.
   SD.end();
-  SPI.begin(SD_SCLK_PIN, SD_MISO_PIN, SD_MOSI_PIN, SD_CS_PIN);
+  sdSPI_.begin(SD_SCLK_PIN, SD_MISO_PIN, SD_MOSI_PIN, SD_CS_PIN);
 
   // A lower SPI clock than the SD library's 4MHz default trades a little
   // speed for reliability on a marginal card or long/shared wiring - well
   // worth it for a text logger that isn't throughput bound.
-  if (!SD.begin(SD_CS_PIN, SPI, 4000000)) {
+  if (!SD.begin(SD_CS_PIN, sdSPI_, 4000000)) {
     Serial.println(F("SD: SD.begin() failed - check card is inserted/seated, "
                       "formatted FAT16/FAT32, and that SD_CS/SCLK/MOSI/MISO_PIN "
                       "in Config.h match your board revision."));

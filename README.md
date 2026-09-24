@@ -43,10 +43,11 @@ damage the input.
 ## Required libraries (Arduino Library Manager)
 
 - **TFT_eSPI** by Bodmer
-- **XPT2046_Touchscreen** by Paul Stoffregen
 
 Everything else (`Preferences`, `SD`, `SPI`) ships with the ESP32 board
-package.
+package. Touch is driven by a small bit-banged (software) SPI
+implementation in `TouchInput.cpp` — no touch library needed; see
+[Why touch is bit-banged](#why-touch-is-bit-banged) below.
 
 ## TFT_eSPI setup (required, one-time)
 
@@ -105,6 +106,34 @@ The top status bar has four touch buttons:
 - **AUTO / PAUSED** — auto-scroll indicator/toggle. Dragging the terminal
   area up/down scrolls through history and automatically pauses
   auto-scroll; tap this button (or drag back to the bottom) to resume.
+
+## Why touch is bit-banged
+
+This board needs three independent SPI buses: the TFT (SCLK/MOSI/MISO on
+12/13/14), touch (25/32/39), and the microSD card (18/23/19) — three
+genuinely different sets of pins, confirmed by testing. The ESP32 classic
+only has **two** general-purpose hardware SPI peripherals available for
+user code. An earlier version of this sketch gave the TFT and touch each a
+hardware peripheral and then pointed the SD card at the *same* peripheral
+the TFT already owned, just re-initialized with different pins — which
+doesn't share a bus, it reroutes the physical peripheral out from under
+whichever device configured it first. Short reads (mounting, `cardType()`,
+`exists()`) were fast enough to get away with it; real write sequences
+weren't, and failed consistently.
+
+The fix: touch — the lowest-bandwidth of the three, comfortably fine with
+software timing at normal poll rates — is driven by a small hand-rolled
+bit-banged SPI implementation in `TouchInput.cpp` instead of a hardware
+SPI peripheral. That frees a whole hardware peripheral (HSPI) for the SD
+card's **exclusive** use (`SDLogger`'s own `SPIClass(HSPI)`), while the
+TFT keeps its own (the default/global `SPI` object, VSPI) untouched. All
+three devices now have a bus that's genuinely theirs alone.
+
+The bit-banged reader speaks the same standard XPT2046 protocol (control
+bytes `0xD0`/`0x90`, 12-bit differential-mode conversion) that hardware-SPI
+touch libraries use, so raw ADC values — and the calibration in the next
+section — should carry over unchanged; if they don't quite match, redo the
+corner-tap calibration below.
 
 ## Touch calibration
 
@@ -183,7 +212,11 @@ of:
   **on a card you've already confirmed is FAT32 and writable from a PC**,
   the filesystem isn't the problem — reads (mount, `cardType()`,
   `cardSize()`, `exists()`) all go through the SPI bus fine, but every
-  write fails, which points at the write path itself:
+  write fails. This was previously explained by an SPI peripheral
+  conflict with the TFT — see
+  [Why touch is bit-banged](#why-touch-is-bit-banged) — which is now
+  fixed by giving the SD card its own dedicated hardware SPI peripheral.
+  If it's *still* failing after that fix, next suspects are:
   - **Power**: SD writes draw a real current spike beyond what reads need,
     and the TFT backlight + SD drawing from it simultaneously can exceed
     what a marginal USB cable/port delivers on these boards. Try a
@@ -210,7 +243,7 @@ ESP32_CYD_Serial_Terminal/
   SerialCapture.{h,cpp}           non-blocking UART line reader
   TermBuffer.{h,cpp}              timestamping, word-wrap, scroll history
   DisplayUI.{h,cpp}               status bar + terminal rendering
-  TouchInput.{h,cpp}              XPT2046 read + screen-coordinate mapping
+  TouchInput.{h,cpp}              bit-banged XPT2046 read + coordinate mapping
   BaudMenu.{h,cpp}                touch baud-select overlay
   Settings.{h,cpp}                Preferences (baud rate, session counter)
   SDLogger.{h,cpp}                microSD session recording

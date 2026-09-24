@@ -31,8 +31,12 @@
 #define TFT_BACKLIGHT_ON     HIGH
 
 // ---------------------------------------------------------------------------
-// Touch (XPT2046) - resistive touch controller on its own bit-banged SPI
-// bus (separate from the TFT's VSPI bus).
+// Touch (XPT2046) - deliberately driven by a bit-banged (software) SPI
+// implementation in TouchInput.cpp rather than a hardware SPI peripheral.
+// This board needs three independent SPI buses (TFT, touch, microSD - see
+// the microSD section below for why they can't share), but the ESP32
+// classic only has two hardware SPI peripherals; bit-banging touch (the
+// lowest-bandwidth of the three) frees a whole peripheral for the SD card.
 // ---------------------------------------------------------------------------
 #define TOUCH_CLK_PIN        25
 #define TOUCH_MOSI_PIN       32
@@ -64,10 +68,16 @@
 #define TOUCH_DEBUG_SERIAL    0
 
 // ---------------------------------------------------------------------------
-// microSD card slot. On some CYD units this shares the TFT's SPI bus; on
-// others (confirmed via testing - card wouldn't mount at 12/13/14) it's
-// wired to its own separate bus at the ESP32's default VSPI pins instead.
-// If your card won't mount, this is the first thing to try swapping.
+// microSD card slot. Confirmed via testing that on this unit it's wired to
+// its own separate bus (the ESP32's default VSPI pins) rather than sharing
+// the TFT's SCLK/MOSI/MISO (12/13/14) - if your card won't mount, that's
+// the first thing to try swapping. SDLogger drives it on its own dedicated
+// hardware SPI peripheral (HSPI), never the global `SPI` object TFT_eSPI
+// owns: since these pins genuinely differ from the TFT's, reusing one
+// peripheral for both by re-begin()'ing it with different pins doesn't
+// "share" a bus, it reroutes the physical peripheral out from under
+// whichever device configured it first - which was silently corrupting
+// SD writes (reads were short enough to get away with it; writes weren't).
 // ---------------------------------------------------------------------------
 #define SD_CS_PIN            5
 #define SD_SCLK_PIN          18
