@@ -39,4 +39,9 @@ private:
   String currentFileName_;
   String logDir_; // "" means the card's root - see mount()'s mkdir fallback
   unsigned long lastFlushMs_ = 0;
+
+  // Root-level write + read-back, independent of session/directory logic -
+  // isolates whether the card can be written to at all vs. a path-specific
+  // problem. Logs its own PASS/FAIL detail to Serial.
+  void runWriteSelfTest();
 };

@@ -169,16 +169,33 @@ of:
   a seating issue: reseat the card or try a different one.
 - **`mounted OK (cardType=..., N MB)`** followed by **`mkdir(...) failed`**
   — the card mounted (correct size/type reported) but can't create a
-  directory. This is the classic signature of a filesystem this SD library
-  can't write to — most commonly a 16GB+ card preformatted as **exFAT**
-  rather than FAT16/FAT32 (this Arduino SD library only supports the
-  latter). The sketch falls back to writing session files directly in the
-  card's root when this happens; if `startSession()`'s file-open then
-  *also* fails, that confirms it's a filesystem problem, not just the one
-  subdirectory — reformat the card as FAT32 (Windows: right-click the
-  drive → Format → FAT32; or use the SD Association's free "SD Card
-  Formatter" tool, which handles this more reliably than most OS format
-  dialogs for larger cards).
+  directory. If the card is a fresh 16GB+ one you haven't verified
+  elsewhere, this can mean it's preformatted **exFAT** rather than
+  FAT16/FAT32 (this Arduino SD library only supports the latter) —
+  reformat it as FAT32 if so (Windows: right-click the drive → Format →
+  FAT32; or the SD Association's free "SD Card Formatter" tool, more
+  reliable than most OS format dialogs for larger cards). But if you've
+  already confirmed the card is FAT32 and read/writable from a PC, keep
+  reading — the write self-test below is the more useful signal.
+- **`write self-test FAILED`** (right after the mount line, always run
+  once per mount) — a direct, path-independent write + read-back at the
+  card's root. If this fails (or the mkdir/session-file opens above fail)
+  **on a card you've already confirmed is FAT32 and writable from a PC**,
+  the filesystem isn't the problem — reads (mount, `cardType()`,
+  `cardSize()`, `exists()`) all go through the SPI bus fine, but every
+  write fails, which points at the write path itself:
+  - **Power**: SD writes draw a real current spike beyond what reads need,
+    and the TFT backlight + SD drawing from it simultaneously can exceed
+    what a marginal USB cable/port delivers on these boards. Try a
+    different (short, quality) USB cable/port, or power the board from a
+    proper 5V/1A+ supply rather than a laptop USB port.
+  - **Seating/wiring**: a connection solid enough for the lighter-weight
+    read commands but marginal under a write command's timing — reseat
+    the card, try a different one, and if you're not on stock wiring,
+    check for loose/long jumper wires on the SD lines.
+- **`write self-test passed`** — the card can be written to; if session
+  recording still fails after this, the problem is specific to the
+  session file's own path, not the card/power/wiring in general.
 
 `mount()` also uses a conservative 4MHz SPI clock (down from the SD
 library's default) for reliability on marginal wiring — a worthwhile
