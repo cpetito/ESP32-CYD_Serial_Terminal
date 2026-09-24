@@ -31,12 +31,13 @@
 #define TFT_BACKLIGHT_ON     HIGH
 
 // ---------------------------------------------------------------------------
-// Touch (XPT2046) - deliberately driven by a bit-banged (software) SPI
-// implementation in TouchInput.cpp rather than a hardware SPI peripheral.
-// This board needs three independent SPI buses (TFT, touch, microSD - see
-// the microSD section below for why they can't share), but the ESP32
-// classic only has two hardware SPI peripherals; bit-banging touch (the
-// lowest-bandwidth of the three) frees a whole peripheral for the SD card.
+// Touch (XPT2046) - deliberately driven by SoftSPI (bit-banged, software
+// SPI - see SoftSPI.h/XPT2046_TouchscreenSOFTSPI.h) rather than a hardware
+// SPI peripheral. This board needs three independent SPI buses (TFT,
+// touch, microSD - see the microSD section below for why they can't
+// share), but the ESP32 classic only has two hardware SPI peripherals;
+// bit-banging touch (the lowest-bandwidth of the three) frees a whole
+// peripheral for the SD card.
 // ---------------------------------------------------------------------------
 #define TOUCH_CLK_PIN        25
 #define TOUCH_MOSI_PIN       32

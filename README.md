@@ -45,8 +45,10 @@ damage the input.
 - **TFT_eSPI** by Bodmer
 
 Everything else (`Preferences`, `SD`, `SPI`) ships with the ESP32 board
-package. Touch is driven by a small bit-banged (software) SPI
-implementation in `TouchInput.cpp` — no touch library needed; see
+package. Touch is driven by `SoftSPI` + `XPT2046_TouchscreenSOFTSPI` —
+bit-banged (software) SPI, vendored directly into this sketch folder
+(sourced from RandomNerdTutorials' CYD example, since that fork isn't in
+the Library Manager) rather than a hardware-SPI touch library; see
 [Why touch is bit-banged](#why-touch-is-bit-banged) below.
 
 ## TFT_eSPI setup (required, one-time)
@@ -122,18 +124,23 @@ whichever device configured it first. Short reads (mounting, `cardType()`,
 weren't, and failed consistently.
 
 The fix: touch — the lowest-bandwidth of the three, comfortably fine with
-software timing at normal poll rates — is driven by a small hand-rolled
-bit-banged SPI implementation in `TouchInput.cpp` instead of a hardware
+software timing at normal poll rates — is driven by `SoftSPI` +
+`XPT2046_TouchscreenSOFTSPI` (vendored unmodified into this sketch folder
+from RandomNerdTutorials' own CYD display+touch+microSD example, rather
+than hand-rolled — the exact XPT2046 bit timing is a hardware detail
+that's easy to get subtly wrong without a scope to verify against, which
+is exactly what happened on the first attempt here) instead of a hardware
 SPI peripheral. That frees a whole hardware peripheral (HSPI) for the SD
 card's **exclusive** use (`SDLogger`'s own `SPIClass(HSPI)`), while the
 TFT keeps its own (the default/global `SPI` object, VSPI) untouched. All
 three devices now have a bus that's genuinely theirs alone.
 
-The bit-banged reader speaks the same standard XPT2046 protocol (control
-bytes `0xD0`/`0x90`, 12-bit differential-mode conversion) that hardware-SPI
-touch libraries use, so raw ADC values — and the calibration in the next
-section — should carry over unchanged; if they don't quite match, redo the
-corner-tap calibration below.
+`TouchInput` sets this library's rotation to `1` (its passthrough case),
+so the raw ADC values it returns are the true, unprocessed reading — same
+as a plain hardware-SPI XPT2046 library would give — meaning the existing
+`TOUCH_SWAP_XY`/`TOUCH_INVERT_*`/`TOUCH_RAW_*_MIN/MAX` calibration below
+still means exactly what it meant before; if values look off, redo the
+corner-tap calibration to confirm.
 
 ## Touch calibration
 
@@ -243,9 +250,11 @@ ESP32_CYD_Serial_Terminal/
   SerialCapture.{h,cpp}           non-blocking UART line reader
   TermBuffer.{h,cpp}              timestamping, word-wrap, scroll history
   DisplayUI.{h,cpp}               status bar + terminal rendering
-  TouchInput.{h,cpp}              bit-banged XPT2046 read + coordinate mapping
+  TouchInput.{h,cpp}              XPT2046 read (via SoftSPI) + coordinate mapping
   BaudMenu.{h,cpp}                touch baud-select overlay
   Settings.{h,cpp}                Preferences (baud rate, session counter)
   SDLogger.{h,cpp}                microSD session recording
   UITypes.h                       shared Rect type for hit-testing
+  SoftSPI.{h,cpp}                 vendored bit-banged SPI (RandomNerdTutorials)
+  XPT2046_TouchscreenSOFTSPI.{h,cpp}  vendored SoftSPI-based touch driver
 ```
