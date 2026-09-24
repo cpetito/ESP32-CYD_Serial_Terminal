@@ -5,20 +5,18 @@
 bool SDLogger::mount() {
   if (mounted_) return true;
 
-  // TFT_eSPI already owns the VSPI bus (SCLK/MOSI/MISO); make sure those
-  // pins are explicitly (re)configured with the SD card's CS line before
-  // handing the bus to the SD library. SD.end() first guarantees a clean
-  // re-init if a prior mount attempt failed partway through.
+  // SD.end() first guarantees a clean re-init if a prior mount attempt
+  // failed partway through.
   SD.end();
-  SPI.begin(TFT_SCLK_PIN, TFT_MISO_PIN, TFT_MOSI_PIN, SD_CS_PIN);
+  SPI.begin(SD_SCLK_PIN, SD_MISO_PIN, SD_MOSI_PIN, SD_CS_PIN);
 
   // A lower SPI clock than the SD library's 4MHz default trades a little
-  // speed for reliability on the CYD's shared, sometimes marginal SD
-  // wiring - well worth it for a text logger that isn't throughput bound.
+  // speed for reliability on a marginal card or long/shared wiring - well
+  // worth it for a text logger that isn't throughput bound.
   if (!SD.begin(SD_CS_PIN, SPI, 4000000)) {
     Serial.println(F("SD: SD.begin() failed - check card is inserted/seated, "
-                      "formatted FAT16/FAT32, and that SD_CS_PIN in Config.h "
-                      "matches your board revision."));
+                      "formatted FAT16/FAT32, and that SD_CS/SCLK/MOSI/MISO_PIN "
+                      "in Config.h match your board revision."));
     mounted_ = false;
     return false;
   }
@@ -35,8 +33,23 @@ bool SDLogger::mount() {
                 (unsigned)cardType,
                 (unsigned long long)(SD.cardSize() / (1024ULL * 1024ULL)));
 
-  if (!SD.exists(SD_LOG_DIR)) {
-    SD.mkdir(SD_LOG_DIR);
+  if (SD.exists(SD_LOG_DIR)) {
+    logDir_ = SD_LOG_DIR;
+  } else if (SD.mkdir(SD_LOG_DIR)) {
+    logDir_ = SD_LOG_DIR;
+  } else {
+    // A card that mounts (correct size/type reported) but can't create a
+    // directory almost always means its filesystem isn't FAT16/FAT32 -
+    // most commonly a 16GB+ card preformatted as exFAT, which this SD
+    // library can't write to at all. Fall back to the root directory
+    // rather than hard-failing every recording: if writes there also fail
+    // (see startSession()), that confirms it's a filesystem-type issue,
+    // not just this one subdirectory - reformat the card as FAT32.
+    Serial.println(F("SD: mkdir(" SD_LOG_DIR ") failed - falling back to the "
+                      "card's root directory for session files. If writes "
+                      "there fail too, the card's filesystem is likely not "
+                      "FAT16/FAT32 (e.g. exFAT) - reformat it as FAT32."));
+    logDir_ = "";
   }
 
   mounted_ = true;
@@ -50,7 +63,11 @@ bool SDLogger::startSession(Settings &settings, String &outFileName) {
 
   uint32_t n = settings.nextSessionNumber();
   char nameBuf[48];
-  snprintf(nameBuf, sizeof(nameBuf), "%s/session_%04u.log", SD_LOG_DIR, (unsigned)n);
+  if (logDir_.length() > 0) {
+    snprintf(nameBuf, sizeof(nameBuf), "%s/session_%04u.log", logDir_.c_str(), (unsigned)n);
+  } else {
+    snprintf(nameBuf, sizeof(nameBuf), "/session_%04u.log", (unsigned)n);
+  }
   currentFileName_ = String(nameBuf);
 
   file_ = SD.open(currentFileName_, FILE_WRITE);

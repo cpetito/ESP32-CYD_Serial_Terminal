@@ -28,7 +28,7 @@ Board: **ESP32-2432S028R** (2.8" ILI9341 320x240 + XPT2046 touch + microSD).
 | Monitored serial RX | 35   |
 | TFT MISO / MOSI / SCLK / CS / DC / BL | 12 / 13 / 14 / 15 / 2 / 21 |
 | Touch CLK / MOSI / MISO / CS / IRQ    | 25 / 32 / 39 / 33 / 36 |
-| microSD CS (shares TFT's SPI bus)     | 5 |
+| microSD CS / SCLK / MOSI / MISO       | 5 / 18 / 23 / 19 |
 
 **GPIO35 is input-only**, which is exactly what an RX-only monitor needs,
 and it isn't used by the display, touch, or SD hardware on this board — it's
@@ -149,31 +149,40 @@ Tap the four screen corners and check the mapped coordinates land near
 `(0,0)`, `(319,0)`, `(0,239)`, and `(319,239)` respectively; use any
 mismatch to tell which of the three adjustments above you still need.
 
-## SD card not detected
+## SD card issues
 
-`SDLogger::mount()` (called when you tap REC) now logs exactly where it
-failed to the USB Serial Monitor (115200 baud) — open it and tap REC to
-see one of:
+`SDLogger::mount()` (called when you tap REC) logs exactly where it failed
+to the USB Serial Monitor (115200 baud) — open it and tap REC to see one
+of:
 
 - **`SD.begin() failed`** — the SPI transaction to the card itself never
-  succeeded. Check: `SD_CS_PIN` in `Config.h` (`5`) actually matches your
-  board revision (a handful of CYD clones wire the microSD CS to a
-  different pin — verify with a multimeter/continuity check against the
-  card slot if this persists), the card is fully seated (listen for the
-  click), and that nothing else is asserting the shared VSPI bus's CS
-  lines at the same time.
+  succeeded. Check `SD_CS_PIN`/`SD_SCLK_PIN`/`SD_MOSI_PIN`/`SD_MISO_PIN` in
+  `Config.h` against your board. **These vary across CYD units**: some
+  share the TFT's SPI bus (12/13/14), others wire the microSD slot to the
+  ESP32's separate default VSPI pins (18/23/19, `SD_CS_PIN` still `5`) —
+  the latter is what this sketch now defaults to, confirmed by testing.
+  If your card still won't mount, verify with a multimeter/continuity
+  check against the card slot's pads. Also confirm the card is fully
+  seated (listen for the click).
 - **`no card was detected (cardType() == CARD_NONE)`** — the SPI
   transaction succeeded but the card itself didn't respond, almost always
-  a seating issue: reseat the card, try a different one, and confirm it's
-  formatted FAT16/FAT32 (not exFAT).
-- **`mounted OK (cardType=..., N MB)`** — the card mounted fine; if REC
-  still doesn't work from here, the failure is in creating the session
-  file itself, not detecting the card.
+  a seating issue: reseat the card or try a different one.
+- **`mounted OK (cardType=..., N MB)`** followed by **`mkdir(...) failed`**
+  — the card mounted (correct size/type reported) but can't create a
+  directory. This is the classic signature of a filesystem this SD library
+  can't write to — most commonly a 16GB+ card preformatted as **exFAT**
+  rather than FAT16/FAT32 (this Arduino SD library only supports the
+  latter). The sketch falls back to writing session files directly in the
+  card's root when this happens; if `startSession()`'s file-open then
+  *also* fails, that confirms it's a filesystem problem, not just the one
+  subdirectory — reformat the card as FAT32 (Windows: right-click the
+  drive → Format → FAT32; or use the SD Association's free "SD Card
+  Formatter" tool, which handles this more reliably than most OS format
+  dialogs for larger cards).
 
-`mount()` also now uses a conservative 4MHz SPI clock (down from the SD
-library's default) since the CYD's TFT/SD shared bus can be marginal at
-higher speeds — a worthwhile trade for a text logger that isn't
-throughput-bound.
+`mount()` also uses a conservative 4MHz SPI clock (down from the SD
+library's default) for reliability on marginal wiring — a worthwhile
+trade for a text logger that isn't throughput-bound.
 
 ## Project layout
 

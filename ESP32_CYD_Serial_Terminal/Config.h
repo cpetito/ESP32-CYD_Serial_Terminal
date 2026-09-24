@@ -64,13 +64,15 @@
 #define TOUCH_DEBUG_SERIAL    0
 
 // ---------------------------------------------------------------------------
-// microSD card slot - shares the TFT's VSPI bus (MOSI/MISO/SCLK), with its
-// own chip-select line.
+// microSD card slot. On some CYD units this shares the TFT's SPI bus; on
+// others (confirmed via testing - card wouldn't mount at 12/13/14) it's
+// wired to its own separate bus at the ESP32's default VSPI pins instead.
+// If your card won't mount, this is the first thing to try swapping.
 // ---------------------------------------------------------------------------
 #define SD_CS_PIN            5
-#define TFT_SCLK_PIN         14
-#define TFT_MOSI_PIN         13
-#define TFT_MISO_PIN         12
+#define SD_SCLK_PIN          18
+#define SD_MOSI_PIN          23
+#define SD_MISO_PIN          19
 
 // ---------------------------------------------------------------------------
 // Display geometry / terminal layout

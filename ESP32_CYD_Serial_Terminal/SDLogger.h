@@ -37,5 +37,6 @@ private:
   bool mounted_ = false;
   File file_;
   String currentFileName_;
+  String logDir_; // "" means the card's root - see mount()'s mkdir fallback
   unsigned long lastFlushMs_ = 0;
 };
