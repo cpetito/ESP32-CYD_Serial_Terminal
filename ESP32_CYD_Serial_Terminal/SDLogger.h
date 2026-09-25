@@ -34,6 +34,14 @@ public:
   // Human-readable status for the UI ("no card", "ready", "REC").
   String statusText() const;
 
+  // Root-level write + read-back, independent of session/directory logic -
+  // isolates whether the card can be written to at all vs. a path-specific
+  // problem. Logs its own PASS/FAIL detail (prefixed with `label`) to
+  // Serial. Public so it can be re-run on demand (e.g. right after other
+  // peripherals init, to check whether *their* setup disturbs the SD bus)
+  // rather than only once, automatically, inside mount().
+  void runWriteSelfTest(const char *label = "SD");
+
 private:
   // A dedicated hardware SPI peripheral, exclusively the SD card's own -
   // not the global default `SPI` object, which TFT_eSPI already owns. See
@@ -47,9 +55,4 @@ private:
   String currentFileName_;
   String logDir_; // "" means the card's root - see mount()'s mkdir fallback
   unsigned long lastFlushMs_ = 0;
-
-  // Root-level write + read-back, independent of session/directory logic -
-  // isolates whether the card can be written to at all vs. a path-specific
-  // problem. Logs its own PASS/FAIL detail to Serial.
-  void runWriteSelfTest();
 };

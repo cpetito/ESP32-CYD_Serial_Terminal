@@ -53,24 +53,18 @@ bool SDLogger::mount() {
   }
 
   mounted_ = true;
-  runWriteSelfTest();
+  runWriteSelfTest("SD boot-mount");
   return true;
 }
 
-void SDLogger::runWriteSelfTest() {
+void SDLogger::runWriteSelfTest(const char *label) {
   const char *testPath = "/cydtest.tmp";
   SD.remove(testPath); // clean slate; ignore failure if it doesn't exist yet
 
   File f = SD.open(testPath, FILE_WRITE);
   if (!f) {
-    Serial.println(F("SD: write self-test FAILED to open a test file at the "
-                      "card's root. Since the card mounts and lists files "
-                      "fine, this points at insufficient power during a "
-                      "write burst (SD writes spike current more than reads "
-                      "- try a better USB cable/port, or power the board "
-                      "from a proper 5V/1A+ supply rather than a laptop "
-                      "port) or a marginal card-slot connection, rather "
-                      "than the card's filesystem."));
+    Serial.printf("%s: write self-test FAILED to open a test file at the "
+                  "card's root.\n", label);
     return;
   }
 
@@ -78,8 +72,8 @@ void SDLogger::runWriteSelfTest() {
   f.flush();
   f.close();
   if (written == 0) {
-    Serial.println(F("SD: write self-test opened the test file but wrote 0 "
-                      "bytes - same likely causes as above (power/wiring)."));
+    Serial.printf("%s: write self-test opened the test file but wrote 0 "
+                  "bytes.\n", label);
     SD.remove(testPath);
     return;
   }
@@ -89,11 +83,8 @@ void SDLogger::runWriteSelfTest() {
   if (rf) rf.close();
   SD.remove(testPath);
 
-  Serial.println(ok ? F("SD: write self-test passed - card can be written "
-                         "to. If session recording still fails, the problem "
-                         "is specific to the session file's path.")
-                     : F("SD: write self-test wrote a file but could not "
-                         "read it back afterward."));
+  Serial.printf("%s: write self-test %s\n", label,
+                ok ? "passed" : "wrote a file but could not read it back");
 }
 
 bool SDLogger::startSession(Settings &settings, String &outFileName) {

@@ -191,6 +191,17 @@ void setup() {
   display.begin();
   touchInput.begin(display.tft().width(), display.tft().height());
 
+  // A second self-test, immediately after TFT/touch init but before
+  // loop() ever runs - zero redraws, zero real touch interaction. If
+  // this fails while the one above (before display/touch existed at
+  // all) passed, that isolates the break to TFT_eSPI's or touch's
+  // one-time setup(), not to anything that only happens while the app
+  // is running. If both pass here but a later REC tap still fails, the
+  // cause is something that only shows up once loop() is running.
+  if (sdLogger.isMounted()) {
+    sdLogger.runWriteSelfTest("SD post-display/touch-init");
+  }
+
   capture.setLineCallback(onLineReceived, nullptr);
   capture.begin(settings.getBaudRate());
 
