@@ -180,6 +180,14 @@ void setup() {
   Serial.begin(115200); // USB CDC, for the sketch's own debug output only
 
   settings.begin();
+
+  // Mounted here, before the TFT/touch peripherals ever run, to match the
+  // proven-working reference sketch's ordering exactly (its SD.begin()
+  // runs before its display/touch init too) - matching pins, bus
+  // exclusivity and SPI clock alone didn't resolve write failures, so
+  // this initialization order is the next concrete thing to rule in/out.
+  sdLogger.mount();
+
   display.begin();
   touchInput.begin(display.tft().width(), display.tft().height());
 
