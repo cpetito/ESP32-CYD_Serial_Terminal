@@ -219,11 +219,11 @@ of:
   **on a card you've already confirmed is FAT32 and writable from a PC**,
   the filesystem isn't the problem — reads (mount, `cardType()`,
   `cardSize()`, `exists()`) all go through the SPI bus fine, but every
-  write fails. This was previously explained by an SPI peripheral
-  conflict with the TFT — see
-  [Why touch is bit-banged](#why-touch-is-bit-banged) — which is now
-  fixed by giving the SD card its own dedicated hardware SPI peripheral.
-  If it's *still* failing after that fix, next suspects are:
+  write fails. Two causes were found and fixed on this exact board+card
+  combination, in order: an SPI peripheral conflict with the TFT (see
+  [Why touch is bit-banged](#why-touch-is-bit-banged)), then an SD SPI
+  clock too low for this wiring (see `SD_SPI_CLOCK_HZ` in `Config.h`,
+  just above). If it's *still* failing after both, next suspects are:
   - **Power**: SD writes draw a real current spike beyond what reads need,
     and the TFT backlight + SD drawing from it simultaneously can exceed
     what a marginal USB cable/port delivers on these boards. Try a
@@ -237,9 +237,14 @@ of:
   recording still fails after this, the problem is specific to the
   session file's own path, not the card/power/wiring in general.
 
-`mount()` also uses a conservative 4MHz SPI clock (down from the SD
-library's default) for reliability on marginal wiring — a worthwhile
-trade for a text logger that isn't throughput-bound.
+`mount()` uses `SD_SPI_CLOCK_HZ` (`Config.h`, currently 55MHz) — matched to
+the RandomNerdTutorials reference sketch's proven-working speed on this
+board+card, after a "safer-sounding" low clock (4MHz) turned out to
+reliably fail writes instead: a very low clock holds each bit on the line
+for a much longer window, which can give noise more time to corrupt it
+than a faster clock does. If writes become unreliable on a different card,
+this is worth lowering; it isn't a universal safe default in either
+direction.
 
 ## Project layout
 

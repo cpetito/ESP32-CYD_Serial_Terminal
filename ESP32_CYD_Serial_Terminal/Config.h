@@ -85,6 +85,16 @@
 #define SD_MOSI_PIN          23
 #define SD_MISO_PIN          19
 
+// A conservative low clock seemed like the safer default, but testing
+// showed the opposite on this card/wiring: writes failed consistently at
+// 4MHz and succeeded once matched to the 55MHz the RandomNerdTutorials
+// reference sketch uses on this same board+card. A very low SPI clock
+// holds each bit's voltage on the line for a much longer window, which
+// can give noise/ground-bounce more time to corrupt it than a faster
+// clock does - the "slower is always safer" assumption doesn't hold
+// universally. Lower this if writes become unreliable on a different card.
+#define SD_SPI_CLOCK_HZ      55000000
+
 // ---------------------------------------------------------------------------
 // Display geometry / terminal layout
 // ---------------------------------------------------------------------------

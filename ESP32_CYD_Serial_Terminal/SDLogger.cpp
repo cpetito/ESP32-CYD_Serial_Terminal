@@ -13,10 +13,10 @@ bool SDLogger::mount() {
   SD.end();
   sdSPI_.begin(SD_SCLK_PIN, SD_MISO_PIN, SD_MOSI_PIN, SD_CS_PIN);
 
-  // A lower SPI clock than the SD library's 4MHz default trades a little
-  // speed for reliability on a marginal card or long/shared wiring - well
-  // worth it for a text logger that isn't throughput bound.
-  if (!SD.begin(SD_CS_PIN, sdSPI_, 4000000)) {
+  // See SD_SPI_CLOCK_HZ in Config.h - matches the clock speed confirmed
+  // working on this exact board+card, rather than the "safer-sounding"
+  // low clock this sketch used previously (which reliably failed writes).
+  if (!SD.begin(SD_CS_PIN, sdSPI_, SD_SPI_CLOCK_HZ)) {
     Serial.println(F("SD: SD.begin() failed - check card is inserted/seated, "
                       "formatted FAT16/FAT32, and that SD_CS/SCLK/MOSI/MISO_PIN "
                       "in Config.h match your board revision."));
