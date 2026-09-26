@@ -60,7 +60,7 @@ the sketch. In your Arduino libraries folder, open
 ```cpp
 #define USER_SETUP_ID 200
 
-#define ILI9341_DRIVER
+#define ILI9341_2_DRIVER   // not ILI9341_DRIVER - see Bodmer/TFT_eSPI#1172
 
 #define TFT_MISO 12
 #define TFT_MOSI 13
@@ -70,6 +70,9 @@ the sketch. In your Arduino libraries folder, open
 #define TFT_RST   -1   // not connected on this board
 #define TFT_BL    21
 #define TFT_BACKLIGHT_ON HIGH
+
+#define TOUCH_CS 33   // harmless if defined - this sketch drives touch itself,
+                       // never through TFT_eSPI's own touch support
 
 #define SPI_FREQUENCY        55000000
 #define SPI_READ_FREQUENCY   20000000
@@ -83,10 +86,19 @@ the sketch. In your Arduino libraries folder, open
 #define LOAD_FONT8
 #define LOAD_GFXFF
 #define SMOOTH_FONT
+
+// Critical on this board: moves the TFT onto HSPI, leaving VSPI free for
+// the microSD card. Without this, the TFT and SD card silently fight over
+// the same physical SPI peripheral - reads mostly get away with it, but
+// writes fail consistently. See "Why touch is bit-banged" below.
+#define USE_HSPI_PORT
 ```
 
-Do **not** define `TOUCH_CS` here — this sketch drives the XPT2046 itself on
-a separate SPI bus (HSPI), independent of TFT_eSPI's own touch support.
+This is confirmed working (not just a generic guess) — it's the actual
+`User_Setup.h` in use on the hardware this sketch was debugged against,
+which itself follows the RandomNerdTutorials CYD guide's own required file
+rather than a generic community one (their guide is explicit that a
+generic `User_Setup.h` "will probably NOT work").
 
 ## Arduino IDE board settings
 
@@ -115,25 +127,43 @@ This board needs three independent SPI buses: the TFT (SCLK/MOSI/MISO on
 12/13/14), touch (25/32/39), and the microSD card (18/23/19) — three
 genuinely different sets of pins, confirmed by testing. The ESP32 classic
 only has **two** general-purpose hardware SPI peripherals available for
-user code. An earlier version of this sketch gave the TFT and touch each a
-hardware peripheral and then pointed the SD card at the *same* peripheral
-the TFT already owned, just re-initialized with different pins — which
-doesn't share a bus, it reroutes the physical peripheral out from under
-whichever device configured it first. Short reads (mounting, `cardType()`,
-`exists()`) were fast enough to get away with it; real write sequences
-weren't, and failed consistently.
+user code (commonly called HSPI and VSPI).
 
-The fix: touch — the lowest-bandwidth of the three, comfortably fine with
-software timing at normal poll rates — is driven by `SoftSPI` +
-`XPT2046_TouchscreenSOFTSPI` (vendored unmodified into this sketch folder
-from RandomNerdTutorials' own CYD display+touch+microSD example, rather
-than hand-rolled — the exact XPT2046 bit timing is a hardware detail
-that's easy to get subtly wrong without a scope to verify against, which
-is exactly what happened on the first attempt here) instead of a hardware
-SPI peripheral. That frees a whole hardware peripheral (HSPI) for the SD
-card's **exclusive** use (`SDLogger`'s own `SPIClass(HSPI)`), while the
-TFT keeps its own (the default/global `SPI` object, VSPI) untouched. All
-three devices now have a bus that's genuinely theirs alone.
+Two conflicts had to be found and fixed, in turn, before all three
+devices had a bus genuinely their own:
+
+1. **SD vs. whichever peripheral it was pointed at.** An earlier version
+   of this sketch gave the TFT and touch each a hardware peripheral and
+   then pointed the SD card at the *same* peripheral some other device
+   already owned, just re-initialized with different pins — which doesn't
+   share a bus, it reroutes the physical peripheral out from under
+   whichever device configured it first. Short reads (mounting,
+   `cardType()`, `exists()`) were fast enough to get away with it; real
+   write (and eventually even read) sequences weren't, and failed
+   consistently once the other device was also active.
+2. **Which peripheral is actually free.** This board's required
+   `User_Setup.h` (see above) defines `USE_HSPI_PORT`, moving the TFT onto
+   **HSPI** rather than the default VSPI. `SDLogger` originally assumed
+   the opposite and put the SD card on HSPI too, recreating conflict #1
+   in a new spot. `SDLogger` now uses **VSPI** for the SD card
+   specifically because it's the peripheral `USE_HSPI_PORT` leaves
+   unclaimed on this setup — if your `User_Setup.h` *doesn't* define
+   `USE_HSPI_PORT`, the TFT is on VSPI instead, and `sdSPI_` in
+   `SDLogger.h` needs to move to `SPIClass(HSPI)` to match.
+
+That still leaves three devices needing buses but only two hardware
+peripherals to go around. The resolution: touch — the lowest-bandwidth of
+the three, comfortably fine with software timing at normal poll rates —
+is driven by `SoftSPI` + `XPT2046_TouchscreenSOFTSPI` (vendored unmodified
+into this sketch folder from RandomNerdTutorials' own CYD
+display+touch+microSD example, rather than hand-rolled — the exact
+XPT2046 bit timing is a hardware detail that's easy to get subtly wrong
+without a scope to verify against, which is exactly what happened on the
+first attempt here) instead of a hardware SPI peripheral at all. That
+frees a whole hardware peripheral for the SD card's **exclusive** use,
+while the TFT keeps its own peripheral (HSPI, per `USE_HSPI_PORT`)
+untouched. All three devices now have a bus that's genuinely theirs
+alone.
 
 `TouchInput` sets this library's rotation to `1` (its passthrough case),
 so the raw ADC values it returns are the true, unprocessed reading — same
@@ -219,11 +249,23 @@ of:
   **on a card you've already confirmed is FAT32 and writable from a PC**,
   the filesystem isn't the problem — reads (mount, `cardType()`,
   `cardSize()`, `exists()`) all go through the SPI bus fine, but every
-  write fails. Two causes were found and fixed on this exact board+card
-  combination, in order: an SPI peripheral conflict with the TFT (see
-  [Why touch is bit-banged](#why-touch-is-bit-banged)), then an SD SPI
-  clock too low for this wiring (see `SD_SPI_CLOCK_HZ` in `Config.h`,
-  just above). If it's *still* failing after both, next suspects are:
+  write fails. On this exact board, that turned out to be an SD-vs-TFT
+  hardware SPI peripheral conflict (see
+  [Why touch is bit-banged](#why-touch-is-bit-banged)) - specifically
+  `SDLogger` assuming the wrong one of HSPI/VSPI was free. A telling sign
+  if you hit this on a fresh setup: it isn't only writes that fail, but
+  *any* SD access performed after the TFT/touch have been initialized,
+  while access performed before they're initialized (e.g. very early in
+  `setup()`) works fine — a card that mounts and passes reads/writes in
+  isolation but fails once other SPI peripherals are also live points
+  straight at this, not at power or the card itself. If it's *still*
+  failing after confirming `sdSPI_` (`SDLogger.h`) uses whichever
+  peripheral your `User_Setup.h` *doesn't* claim, next suspects are:
+  - **The card itself**: one card used during this sketch's development
+    turned out to be physically read-only — it mounted, reported a
+    correct size/type, and passed reads, but failed every write, in every
+    location, unconditionally. A different card resolved it immediately.
+    Worth ruling out early with a second card if nothing else here fits.
   - **Power**: SD writes draw a real current spike beyond what reads need,
     and the TFT backlight + SD drawing from it simultaneously can exceed
     what a marginal USB cable/port delivers on these boards. Try a
@@ -239,12 +281,15 @@ of:
 
 `mount()` uses `SD_SPI_CLOCK_HZ` (`Config.h`, currently 55MHz) — matched to
 the RandomNerdTutorials reference sketch's proven-working speed on this
-board+card, after a "safer-sounding" low clock (4MHz) turned out to
-reliably fail writes instead: a very low clock holds each bit on the line
-for a much longer window, which can give noise more time to corrupt it
-than a faster clock does. If writes become unreliable on a different card,
-this is worth lowering; it isn't a universal safe default in either
-direction.
+board. This replaced an initially "safer-sounding" 4MHz default, though
+that change was never cleanly confirmed necessary: the write failures
+seen at the time turned out to have two other explanations (a physically
+read-only card, and the SD/TFT SPI peripheral conflict below), either of
+which would fail at any clock speed. Matching the reference's proven
+value is a reasonable default regardless; lower it if writes become
+unreliable on a particular card, since a very low clock isn't a
+universally safe choice either (it holds each bit on the line for a much
+longer window, which can give noise more time to corrupt it).
 
 ## Project layout
 

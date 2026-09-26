@@ -73,26 +73,31 @@
 // its own separate bus (the ESP32's default VSPI pins) rather than sharing
 // the TFT's SCLK/MOSI/MISO (12/13/14) - if your card won't mount, that's
 // the first thing to try swapping. SDLogger drives it on its own dedicated
-// hardware SPI peripheral (HSPI), never the global `SPI` object TFT_eSPI
-// owns: since these pins genuinely differ from the TFT's, reusing one
-// peripheral for both by re-begin()'ing it with different pins doesn't
-// "share" a bus, it reroutes the physical peripheral out from under
-// whichever device configured it first - which was silently corrupting
-// SD writes (reads were short enough to get away with it; writes weren't).
+// hardware SPI peripheral, kept deliberately separate from whichever one
+// TFT_eSPI's User_Setup.h assigns to the display (USE_HSPI_PORT on this
+// board's required setup - see SDLogger.h) - reusing one physical
+// peripheral for both, even via a second SPIClass object, doesn't "share"
+// a bus, it reroutes the peripheral out from under whichever device
+// configured it first, which silently corrupted SD access once both were
+// live (isolated single-peripheral reads got lucky; sustained access,
+// like real writes, consistently didn't).
 // ---------------------------------------------------------------------------
 #define SD_CS_PIN            5
 #define SD_SCLK_PIN          18
 #define SD_MOSI_PIN          23
 #define SD_MISO_PIN          19
 
-// A conservative low clock seemed like the safer default, but testing
-// showed the opposite on this card/wiring: writes failed consistently at
-// 4MHz and succeeded once matched to the 55MHz the RandomNerdTutorials
-// reference sketch uses on this same board+card. A very low SPI clock
-// holds each bit's voltage on the line for a much longer window, which
-// can give noise/ground-bounce more time to corrupt it than a faster
-// clock does - the "slower is always safer" assumption doesn't hold
-// universally. Lower this if writes become unreliable on a different card.
+// Matches the RandomNerdTutorials reference sketch's proven-working speed
+// on this board. This was changed up from an initially "safer-sounding"
+// 4MHz on the theory that a very low SPI clock holds each bit's voltage
+// on the line for a much longer window, giving noise more time to corrupt
+// it than a faster clock does - plausible, but never cleanly confirmed:
+// the actual write failures at the time turned out to be caused by an SD
+// card that was physically read-only, and separately by an SD/TFT SPI
+// peripheral conflict (see SDLogger.h), either of which would have failed
+// at any clock speed. Matching the reference's value is a reasonable
+// default regardless; lower it if writes become unreliable on a
+// particular card.
 #define SD_SPI_CLOCK_HZ      55000000
 
 // ---------------------------------------------------------------------------

@@ -43,12 +43,17 @@ public:
   void runWriteSelfTest(const char *label = "SD");
 
 private:
-  // A dedicated hardware SPI peripheral, exclusively the SD card's own -
-  // not the global default `SPI` object, which TFT_eSPI already owns. See
-  // TouchInput.h for why this board needs each of its three SPI devices
-  // on its own bus (two get a hardware peripheral each; touch is
-  // bit-banged) rather than reusing one peripheral with swapped pins.
-  SPIClass sdSPI_ = SPIClass(HSPI);
+  // A dedicated hardware SPI peripheral, exclusively the SD card's own.
+  // TFT_eSPI's User_Setup.h for this board defines USE_HSPI_PORT, which
+  // moves the TFT onto its own internal SPI object bound to HSPI (not the
+  // Arduino-global `SPI` symbol, which stays VSPI-bound but goes unused
+  // by TFT_eSPI in this configuration) - so SD must use VSPI instead,
+  // which is the peripheral actually left unclaimed. Confirmed by
+  // testing: HSPI here silently broke SD writes once the TFT was also
+  // live, since both were fighting over the same physical peripheral.
+  // See TouchInput.h for why touch is bit-banged rather than needing a
+  // third hardware peripheral this chip doesn't have.
+  SPIClass sdSPI_ = SPIClass(VSPI);
 
   bool mounted_ = false;
   File file_;

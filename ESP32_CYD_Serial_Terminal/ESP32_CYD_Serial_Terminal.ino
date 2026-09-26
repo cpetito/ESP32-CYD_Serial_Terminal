@@ -181,26 +181,13 @@ void setup() {
 
   settings.begin();
 
-  // Mounted here, before the TFT/touch peripherals ever run, to match the
-  // proven-working reference sketch's ordering exactly (its SD.begin()
-  // runs before its display/touch init too) - matching pins, bus
-  // exclusivity and SPI clock alone didn't resolve write failures, so
-  // this initialization order is the next concrete thing to rule in/out.
+  // Mounted here, before the TFT/touch peripherals run, so the REC button
+  // shows accurate SD status from the very first frame rather than only
+  // after the first tap.
   sdLogger.mount();
 
   display.begin();
   touchInput.begin(display.tft().width(), display.tft().height());
-
-  // A second self-test, immediately after TFT/touch init but before
-  // loop() ever runs - zero redraws, zero real touch interaction. If
-  // this fails while the one above (before display/touch existed at
-  // all) passed, that isolates the break to TFT_eSPI's or touch's
-  // one-time setup(), not to anything that only happens while the app
-  // is running. If both pass here but a later REC tap still fails, the
-  // cause is something that only shows up once loop() is running.
-  if (sdLogger.isMounted()) {
-    sdLogger.runWriteSelfTest("SD post-display/touch-init");
-  }
 
   capture.setLineCallback(onLineReceived, nullptr);
   capture.begin(settings.getBaudRate());

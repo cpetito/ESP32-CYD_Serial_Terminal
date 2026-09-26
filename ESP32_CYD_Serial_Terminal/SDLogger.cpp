@@ -4,18 +4,15 @@
 bool SDLogger::mount() {
   if (mounted_) return true;
 
-  // sdSPI_ is a dedicated HSPI peripheral, exclusively the SD card's own -
-  // unlike the previous approach of re-begin()'ing the global `SPI` object
-  // (VSPI, already owned by TFT_eSPI) with the SD card's different pins,
-  // which was silently rerouting that shared physical peripheral out from
-  // under the TFT and corrupting writes. SD.end() first guarantees a
+  // sdSPI_ is a dedicated VSPI peripheral, exclusively the SD card's own -
+  // see the comment on sdSPI_ in SDLogger.h for why VSPI specifically (the
+  // TFT's User_Setup.h moves it onto HSPI). SD.end() first guarantees a
   // clean re-init if a prior mount attempt failed partway through.
   SD.end();
   sdSPI_.begin(SD_SCLK_PIN, SD_MISO_PIN, SD_MOSI_PIN, SD_CS_PIN);
 
-  // See SD_SPI_CLOCK_HZ in Config.h - matches the clock speed confirmed
-  // working on this exact board+card, rather than the "safer-sounding"
-  // low clock this sketch used previously (which reliably failed writes).
+  // See SD_SPI_CLOCK_HZ in Config.h for why this isn't a conservative
+  // low value.
   if (!SD.begin(SD_CS_PIN, sdSPI_, SD_SPI_CLOCK_HZ)) {
     Serial.println(F("SD: SD.begin() failed - check card is inserted/seated, "
                       "formatted FAT16/FAT32, and that SD_CS/SCLK/MOSI/MISO_PIN "
