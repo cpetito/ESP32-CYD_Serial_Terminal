@@ -36,11 +36,20 @@ public:
   bool isAtBottom() const { return scrollOffset_ == 0; }
   uint16_t maxScrollOffset(uint16_t visibleRows) const;
 
+  // Whether new lines pin the view to the bottom. This is the single
+  // source of truth for the app's AUTO/PAUSED state - addLine() consults
+  // it on every push, including the common case of pausing while already
+  // at the bottom (offset 0), which merely tracking "has the user
+  // scrolled up" can't distinguish from actively following.
+  bool isAutoscrollOn() const { return autoscroll_; }
+  void setAutoscroll(bool on);
+
 private:
   String lines_[HISTORY_CAPACITY];
   uint16_t head_;     // index of the oldest line
   uint16_t count_;    // number of valid lines
   uint16_t scrollOffset_;
+  bool autoscroll_;
 
   void pushWrapped(const String &text);
 };

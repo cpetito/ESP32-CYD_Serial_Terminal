@@ -2,7 +2,7 @@
 #include "TermBuffer.h"
 
 TermBuffer::TermBuffer()
-  : head_(0), count_(0), scrollOffset_(0) {
+  : head_(0), count_(0), scrollOffset_(0), autoscroll_(true) {
 }
 
 String TermBuffer::formatTimestamp(unsigned long ms) {
@@ -20,6 +20,7 @@ void TermBuffer::clear() {
   head_ = 0;
   count_ = 0;
   scrollOffset_ = 0;
+  autoscroll_ = true;
   for (uint16_t i = 0; i < HISTORY_CAPACITY; i++) {
     lines_[i] = "";
   }
@@ -38,10 +39,16 @@ void TermBuffer::pushWrapped(const String &text) {
   lines_[writeIndex] = text;
 
   // A new line always lands at the "newest" end, which increases every
-  // older line's distance from the bottom by one. If the user has scrolled
-  // back (offset > 0), bump the offset to keep the same content in view
-  // instead of letting it silently drift toward the bottom.
-  if (scrollOffset_ > 0) {
+  // older line's distance from the bottom by one. While autoscrolling,
+  // stay pinned to it (offset 0). While paused, keep the offset tracking
+  // the same historical content instead of drifting toward the bottom -
+  // this has to run even when the offset was already 0 (paused right at
+  // the bottom is the common case), not just when the user had actually
+  // scrolled back, otherwise "paused at the bottom" is indistinguishable
+  // from "still following".
+  if (autoscroll_) {
+    scrollOffset_ = 0;
+  } else {
     scrollOffset_++;
     uint16_t maxOffset = (count_ > 0) ? (count_ - 1) : 0;
     if (scrollOffset_ > maxOffset) scrollOffset_ = maxOffset;
@@ -116,4 +123,9 @@ void TermBuffer::scrollBy(int32_t deltaLines) {
   int32_t newOffset = (int32_t)scrollOffset_ + deltaLines;
   if (newOffset < 0) newOffset = 0;
   scrollOffset_ = (uint16_t)newOffset;
+}
+
+void TermBuffer::setAutoscroll(bool on) {
+  autoscroll_ = on;
+  if (on) scrollOffset_ = 0; // jump to the bottom immediately, not just on the next line
 }

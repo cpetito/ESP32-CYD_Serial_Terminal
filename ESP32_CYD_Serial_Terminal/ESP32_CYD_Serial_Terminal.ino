@@ -34,7 +34,6 @@ static SDLogger sdLogger;
 static BaudMenu baudMenu;
 
 static AppMode mode = MODE_TERMINAL;
-static bool autoscroll = true;
 static bool recording = false;
 
 // --- Touch gesture state (shared press/drag/tap tracking) -----------------
@@ -85,15 +84,13 @@ static void handleTerminalTap(int16_t x, int16_t y) {
     return;
   }
   if (display.btnClear().contains(x, y)) {
-    history.clear();
-    autoscroll = true;
+    history.clear(); // also resets to autoscroll-on
     display.markTerminalDirty();
     display.markStatusDirty();
     return;
   }
   if (display.btnAutoscroll().contains(x, y)) {
-    autoscroll = !autoscroll;
-    if (autoscroll) history.setScrollOffset(0);
+    history.setAutoscroll(!history.isAutoscrollOn());
     display.markTerminalDirty();
     display.markStatusDirty();
     return;
@@ -142,7 +139,7 @@ static void pollTouch() {
       if (lines != 0) {
         history.scrollBy(lines); // drag down -> positive dy -> scroll toward older
         clampScroll();
-        autoscroll = history.isAtBottom();
+        history.setAutoscroll(history.isAtBottom());
         display.markTerminalDirty();
         display.markStatusDirty();
         dragAccumPx -= lines * lineHeightPx;
@@ -170,9 +167,8 @@ static void onLineReceived(const String &line, unsigned long timestampMs, void *
     sdLogger.writeLine(stamped);
   }
 
-  if (autoscroll) {
-    history.setScrollOffset(0);
-  }
+  // Pinning to the bottom (or not) while autoscrolling is paused is
+  // handled inside TermBuffer::addLine() itself now - see pushWrapped().
   display.markTerminalDirty();
 }
 
@@ -204,7 +200,7 @@ void loop() {
     static unsigned long lastRenderMs = 0;
     unsigned long now = millis();
     if (now - lastRenderMs >= NEW_DATA_FLUSH_MS) {
-      display.render(history, capture.baudRate(), sdLogger.statusText(), recording, autoscroll);
+      display.render(history, capture.baudRate(), sdLogger.statusText(), recording, history.isAutoscrollOn());
       lastRenderMs = now;
     }
   }
