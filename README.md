@@ -311,3 +311,8 @@ ESP32_CYD_Serial_Terminal/
   SoftSPI.{h,cpp}                 vendored bit-banged SPI (RandomNerdTutorials)
   XPT2046_TouchscreenSOFTSPI.{h,cpp}  vendored SoftSPI-based touch driver
 ```
+
+For how a byte on GPIO35 becomes pixels on screen - the
+`SerialCapture` → `TermBuffer` → `DisplayUI` pipeline, timestamping,
+word-wrap, and the ring buffer/autoscroll interaction - see
+[SERIAL_TO_DISPLAY.md](SERIAL_TO_DISPLAY.md).
