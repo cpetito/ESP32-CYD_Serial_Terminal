@@ -116,6 +116,9 @@ The top status bar has four touch buttons:
   baud rate; it's saved immediately and used on next boot too.
 - **REC** — toggles microSD session recording. Shows `NO SD` if no card is
   present, `SD OK` once mounted, and `REC` (highlighted) while recording.
+  Card presence is re-checked for real on every tap (not just once at
+  boot), so removing the card and tapping REC correctly falls back to
+  `NO SD` rather than continuing to show a stale `SD OK`.
 - **CLR** — clears the on-screen history.
 - **AUTO / PAUSED** — auto-scroll indicator/toggle. Dragging the terminal
   area up/down scrolls through history and automatically pauses

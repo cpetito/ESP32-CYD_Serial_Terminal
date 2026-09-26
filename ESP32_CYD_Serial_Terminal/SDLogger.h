@@ -12,8 +12,10 @@
 
 class SDLogger {
 public:
-  // Attempts to mount the card. Safe to call repeatedly (e.g. each time the
-  // user opens the recording toggle) in case a card was inserted later.
+  // Attempts to mount the card, always performing a fresh check rather
+  // than trusting a previous result - called each time the user opens the
+  // recording toggle, so a card inserted (or removed) since the last
+  // attempt is picked up correctly.
   bool mount();
   bool isMounted() const { return mounted_; }
 

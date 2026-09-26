@@ -2,12 +2,18 @@
 #include "SDLogger.h"
 
 bool SDLogger::mount() {
-  if (mounted_) return true;
+  // Deliberately no "if (mounted_) return true" short-circuit: this is
+  // only ever called at boot and once per REC tap, so it's cheap enough
+  // to always re-verify the card is genuinely still there, rather than
+  // trust a flag that would otherwise go stale the moment a card is
+  // pulled out after a successful mount (REC would keep reporting
+  // "SD OK" indefinitely, since nothing would ever re-check).
 
   // sdSPI_ is a dedicated VSPI peripheral, exclusively the SD card's own -
   // see the comment on sdSPI_ in SDLogger.h for why VSPI specifically (the
   // TFT's User_Setup.h moves it onto HSPI). SD.end() first guarantees a
-  // clean re-init if a prior mount attempt failed partway through.
+  // clean re-init, including a re-check of a card that's since been
+  // removed (or replaced) rather than reusing whatever was true before.
   SD.end();
   sdSPI_.begin(SD_SCLK_PIN, SD_MISO_PIN, SD_MOSI_PIN, SD_CS_PIN);
 
@@ -50,7 +56,7 @@ bool SDLogger::mount() {
   }
 
   mounted_ = true;
-  runWriteSelfTest("SD boot-mount");
+  runWriteSelfTest("SD mount");
   return true;
 }
 
