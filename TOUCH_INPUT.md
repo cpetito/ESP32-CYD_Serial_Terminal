@@ -99,7 +99,10 @@ into press/drag/release events:
   within `history.maxScrollOffset()`, and `history.setAutoscroll(history.isAtBottom())`
   updates the single source of truth for the AUTO/PAUSED state (see
   [SERIAL_TO_DISPLAY.md](SERIAL_TO_DISPLAY.md) for why `TermBuffer`, not
-  a separate bool here, owns that flag).
+  a separate bool here, owns that flag). See
+  [DRAG_SCROLL.md](DRAG_SCROLL.md) for the full pixel-accumulator math,
+  the bounds-clamping split between `TermBuffer` and the `.ino`, and how
+  the result gets rendered.
 - **Release** (`!touched && touchWasDown`): if the gesture never crossed
   the drag threshold, it's a tap — dispatched to `handleTerminalTap()` or
   `handleBaudMenuTap()` depending on `mode`, using the **press** position

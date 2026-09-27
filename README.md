@@ -329,4 +329,6 @@ and the corner-tap calibration procedure - plus a case study on telling
 a real calibration problem apart from a too-small hit target - see
 [TOUCH_CALIBRATION.md](TOUCH_CALIBRATION.md). For exactly what `NO SD`/
 `SD OK`/`REC` mean and why that logic was never actually the bug behind
-a stale status, see [SD_STATUS_TEXT.md](SD_STATUS_TEXT.md).
+a stale status, see [SD_STATUS_TEXT.md](SD_STATUS_TEXT.md). For the
+drag-to-scroll pixel math, direction convention, and how the result gets
+rendered, see [DRAG_SCROLL.md](DRAG_SCROLL.md).
