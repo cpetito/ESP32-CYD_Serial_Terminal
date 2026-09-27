@@ -105,7 +105,7 @@ static void toggleRecording() {
   display.markStatusDirty();
 }
 ```
-Note there's no separate error UI on failure — `statusText()` (§4) already
+Note there's no separate error UI on failure — `statusText()` (§5) already
 reflects *why* on the very same button, so a failed start just... doesn't
 change to `REC`, and the existing `NO SD`/`SD OK` label explains itself.
 
@@ -161,7 +161,11 @@ String SDLogger::statusText() const {
 ```
 Checked (and the button redrawn) via `display.markStatusDirty()` after
 every mount attempt and every toggle — never polled continuously, since
-nothing changes it outside of those explicit triggers.
+nothing changes it outside of those explicit triggers. See
+[SD_STATUS_TEXT.md](SD_STATUS_TEXT.md) for the full precedence logic,
+why this specific function was never actually the bug behind the
+"stays SD OK after removal" issue (§1 was), and a related duplication
+worth knowing about between this and the `.ino`'s own `recording` bool.
 
 ## Key files at a glance
 
