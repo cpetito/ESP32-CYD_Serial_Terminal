@@ -315,4 +315,7 @@ ESP32_CYD_Serial_Terminal/
 For how a byte on GPIO35 becomes pixels on screen - the
 `SerialCapture` → `TermBuffer` → `DisplayUI` pipeline, timestamping,
 word-wrap, and the ring buffer/autoscroll interaction - see
-[SERIAL_TO_DISPLAY.md](SERIAL_TO_DISPLAY.md).
+[SERIAL_TO_DISPLAY.md](SERIAL_TO_DISPLAY.md). For how a touch on the
+glass becomes a scroll, tap, or button press - the XPT2046 read, the
+tap-vs-drag gesture state machine, and button/overlay dispatch - see
+[TOUCH_INPUT.md](TOUCH_INPUT.md).
