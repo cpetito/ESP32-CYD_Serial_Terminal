@@ -318,4 +318,8 @@ word-wrap, and the ring buffer/autoscroll interaction - see
 [SERIAL_TO_DISPLAY.md](SERIAL_TO_DISPLAY.md). For how a touch on the
 glass becomes a scroll, tap, or button press - the XPT2046 read, the
 tap-vs-drag gesture state machine, and button/overlay dispatch - see
-[TOUCH_INPUT.md](TOUCH_INPUT.md).
+[TOUCH_INPUT.md](TOUCH_INPUT.md). For the baud-select overlay and NVS
+persistence, see [BAUD_SELECT.md](BAUD_SELECT.md). For microSD session
+recording - mounting, the write self-test, and the SPI-peripheral
+history worth knowing before touching that code again - see
+[SD_LOGGING.md](SD_LOGGING.md).
