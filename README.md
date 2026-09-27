@@ -322,4 +322,5 @@ tap-vs-drag gesture state machine, and button/overlay dispatch - see
 persistence, see [BAUD_SELECT.md](BAUD_SELECT.md). For microSD session
 recording - mounting, the write self-test, and the SPI-peripheral
 history worth knowing before touching that code again - see
-[SD_LOGGING.md](SD_LOGGING.md).
+[SD_LOGGING.md](SD_LOGGING.md). For the CLR button (and why it also
+resets autoscroll), see [CLR_BUTTON.md](CLR_BUTTON.md).
