@@ -17,6 +17,15 @@
 // NOTE: ESP32 GPIOs are 3.3V only. If the device being monitored uses 5V
 // logic (e.g. an Arduino Uno), use a level shifter or a resistor divider
 // (e.g. 10k/20k) between its TX pin and GPIO35 to avoid damaging the ESP32.
+// NOTE: GPIO35 is one of the ESP32's four input-only pins (34/35/36/39)
+// that have NO internal pull-up/pull-down at all - a silicon limitation,
+// not something pinMode(INPUT_PULLUP) can work around here. Left
+// unconnected (nothing wired to it), this pin floats and picks up noise,
+// which the UART can occasionally frame as spurious bytes/lines. If
+// you're monitoring intermittently and want a clean idle line when
+// nothing's connected, add an external ~10k pull-up resistor from GPIO35
+// to 3V3 (holds the line at the UART idle/mark state) - this can't be
+// fixed in software on this specific pin.
 #define MONITOR_RX_PIN      35
 #define MONITOR_UART        Serial2
 #define MONITOR_UART_NUM    2

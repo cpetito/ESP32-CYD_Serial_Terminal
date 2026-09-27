@@ -40,6 +40,15 @@ monitoring a 5V device (e.g. an Arduino Uno), add a level shifter or a
 resistor divider (e.g. 10kΩ/20kΩ) between its TX pin and GPIO35, or you can
 damage the input.
 
+**Leaving GPIO35 unconnected:** GPIO35 is one of the ESP32's four
+input-only pins (34/35/36/39) with **no internal pull-up/pull-down at
+all** — a hardware limitation, not something `pinMode(INPUT_PULLUP)` can
+work around. Left floating with nothing wired to it, it can pick up
+noise that the UART occasionally frames as spurious bytes or lines. If
+you monitor intermittently and want a clean, quiet idle line when
+nothing's connected, add an external ~10kΩ pull-up resistor from GPIO35
+to 3V3 (holds the line at the UART's idle/mark state).
+
 ## Required libraries (Arduino Library Manager)
 
 - **TFT_eSPI** by Bodmer
