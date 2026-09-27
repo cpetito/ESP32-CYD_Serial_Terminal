@@ -5,6 +5,16 @@ void SerialCapture::begin(uint32_t baudRate) {
   baudRate_ = baudRate;
   // RX-only: pass -1 for the TX pin since we never transmit on this UART.
   MONITOR_UART.begin(baudRate_, SERIAL_8N1, MONITOR_RX_PIN, -1);
+
+  // Called after begin() (not before) in case attaching the UART's RX
+  // signal to this pin resets its pad configuration - pinMode() only
+  // touches direction/pull, not the GPIO-matrix peripheral routing
+  // begin() just set up, so this is safe to layer on afterward. Holds
+  // the line at idle-high with nothing connected, so noise doesn't get
+  // framed as spurious start bits/bytes - see the MONITOR_RX_PIN comment
+  // in Config.h for why this pin specifically supports it.
+  pinMode(MONITOR_RX_PIN, INPUT_PULLUP);
+
   lineBuffer_ = "";
   haveLineStart_ = false;
   sawCR_ = false;

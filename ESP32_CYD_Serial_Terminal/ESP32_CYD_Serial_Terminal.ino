@@ -3,7 +3,7 @@
 // Receive-only serial monitor / logger for the ESP32-2432S028R "Cheap
 // Yellow Display" board (2.8" ILI9341 + XPT2046 touch).
 //
-// - Listens on GPIO35 (RX only) for another device's TX line.
+// - Listens on GPIO22 (RX only, internal pull-up) for another device's TX line.
 // - Non-blocking capture; CR, LF or CR/LF all terminate a line.
 // - Each line is timestamped with millis() and word-wrapped on screen.
 // - Scrollable history via touch drag; touch buttons for baud selection,

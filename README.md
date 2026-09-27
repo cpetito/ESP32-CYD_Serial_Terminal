@@ -6,7 +6,7 @@ built as an Arduino IDE sketch.
 
 ## Features
 
-- Receive-only serial monitor on **GPIO35**
+- Receive-only serial monitor on **GPIO22**, idling clean via its internal pull-up
 - Non-blocking serial reception (never blocks `loop()`)
 - CR, LF, or CR/LF all terminate a line (CR/LF collapsed into one)
 - `millis()` timestamp on every line (`[mm:ss.mmm]`)
@@ -25,29 +25,27 @@ Board: **ESP32-2432S028R** (2.8" ILI9341 320x240 + XPT2046 touch + microSD).
 
 | Signal              | GPIO |
 |---------------------|------|
-| Monitored serial RX | 35   |
+| Monitored serial RX | 22   |
 | TFT MISO / MOSI / SCLK / CS / DC / BL | 12 / 13 / 14 / 15 / 2 / 21 |
 | Touch CLK / MOSI / MISO / CS / IRQ    | 25 / 32 / 39 / 33 / 36 |
 | microSD CS / SCLK / MOSI / MISO       | 5 / 18 / 23 / 19 |
 
-**GPIO35 is input-only**, which is exactly what an RX-only monitor needs,
-and it isn't used by the display, touch, or SD hardware on this board — it's
-broken out on the CN1 header.
+**GPIO22 is broken out to this board's P3 connector** (confirmed on
+hardware, alongside 21/27/35 — 21 is already the TFT backlight pin here),
+and isn't used by the display, touch, or SD hardware in this design. Unlike
+GPIO35 (used by an earlier version of this sketch), GPIO22 is a regular
+bidirectional GPIO with real internal pull-up/pull-down support — so
+`SerialCapture` enables its internal pull-up, and an unconnected line
+idles clean at the UART's mark state instead of floating and occasionally
+having noise framed as spurious bytes. GPIO35/34/36/39 (the ESP32's four
+input-only pins) have no internal pull at all, and would need an external
+resistor for the same result — not needed here.
 
-**Wiring the monitored device:** connect its TX pin to the CYD's GPIO35, and
+**Wiring the monitored device:** connect its TX pin to the CYD's GPIO22, and
 tie the grounds together. The ESP32 is **3.3V logic only** — if you're
 monitoring a 5V device (e.g. an Arduino Uno), add a level shifter or a
-resistor divider (e.g. 10kΩ/20kΩ) between its TX pin and GPIO35, or you can
-damage the input.
-
-**Leaving GPIO35 unconnected:** GPIO35 is one of the ESP32's four
-input-only pins (34/35/36/39) with **no internal pull-up/pull-down at
-all** — a hardware limitation, not something `pinMode(INPUT_PULLUP)` can
-work around. Left floating with nothing wired to it, it can pick up
-noise that the UART occasionally frames as spurious bytes or lines. If
-you monitor intermittently and want a clean, quiet idle line when
-nothing's connected, add an external ~10kΩ pull-up resistor from GPIO35
-to 3V3 (holds the line at the UART's idle/mark state).
+resistor divider (e.g. 10kΩ/20kΩ) between its TX pin and GPIO22, or you can
+damage the input; the internal pull-up doesn't change this requirement.
 
 ## Required libraries (Arduino Library Manager)
 
@@ -321,7 +319,7 @@ ESP32_CYD_Serial_Terminal/
   XPT2046_TouchscreenSOFTSPI.{h,cpp}  vendored SoftSPI-based touch driver
 ```
 
-For how a byte on GPIO35 becomes pixels on screen - the
+For how a byte on GPIO22 becomes pixels on screen - the
 `SerialCapture` → `TermBuffer` → `DisplayUI` pipeline, timestamping,
 word-wrap, and the ring buffer/autoscroll interaction - see
 [SERIAL_TO_DISPLAY.md](SERIAL_TO_DISPLAY.md). For how a touch on the

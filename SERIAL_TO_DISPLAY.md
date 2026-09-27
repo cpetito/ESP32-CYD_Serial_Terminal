@@ -1,13 +1,13 @@
 # Serial-in-to-display pipeline
 
-A technical reference for how a byte arriving on GPIO35 ends up as pixels
+A technical reference for how a byte arriving on GPIO22 ends up as pixels
 on the TFT. Written for whoever next needs to touch this code without
 re-deriving it from scratch.
 
 ## Overview
 
 ```
-GPIO35 (RX) ──▶ SerialCapture::poll()  ──▶ onLineReceived()  ──▶ TermBuffer::addLine()  ──▶ DisplayUI::render()
+GPIO22 (RX) ──▶ SerialCapture::poll()  ──▶ onLineReceived()  ──▶ TermBuffer::addLine()  ──▶ DisplayUI::render()
    (UART2)         assembles raw lines      (.ino callback)      timestamp, word-wrap,        draws visible
                     from bytes, non-               │              store in ring buffer          slice to TFT
                     blocking                        ▼
@@ -28,10 +28,14 @@ void loop() {
 
 ## 1. Capturing bytes: `SerialCapture` (`SerialCapture.h/.cpp`)
 
-- `MONITOR_UART` (`Serial2`) is opened RX-only: `begin(baud, SERIAL_8N1, MONITOR_RX_PIN /* 35 */, -1)`.
-  Passing `-1` for TX means this UART only ever reads; GPIO35 is
-  input-only anyway, so this is also a hardware constraint, not just a
-  choice.
+- `MONITOR_UART` (`Serial2`) is opened RX-only: `begin(baud, SERIAL_8N1, MONITOR_RX_PIN /* 22 */, -1)`.
+  Passing `-1` for TX means this UART only ever reads. `begin()` also
+  enables `MONITOR_RX_PIN`'s internal pull-up right after opening the
+  UART, so an unconnected line idles clean instead of floating and
+  occasionally having noise framed as spurious bytes — see the
+  `MONITOR_RX_PIN` comment in `Config.h` for why GPIO22 specifically
+  (a regular GPIO with real pull-up support, unlike GPIO35 used by an
+  earlier version of this sketch).
 - `poll()` drains up to `kMaxBytesPerPoll` (512) bytes per call via
   `available()`/`read()` — bounded so a fast/noisy source can't starve
   touch handling and rendering in the same `loop()` iteration.
@@ -152,7 +156,7 @@ directly).
 
 | Constant | Meaning |
 |---|---|
-| `MONITOR_RX_PIN` / `MONITOR_UART` | GPIO35 / `Serial2` — the monitored line |
+| `MONITOR_RX_PIN` / `MONITOR_UART` | GPIO22 / `Serial2` — the monitored line, internal pull-up enabled |
 | `MAX_RAW_LINE_LEN` (512) | Forces a line break if no CR/LF ever arrives |
 | `HISTORY_CAPACITY` (400) | Ring buffer size, in word-wrapped display lines |
 | `NEW_DATA_FLUSH_MS` (10) | Minimum gap between `display.render()` calls |
