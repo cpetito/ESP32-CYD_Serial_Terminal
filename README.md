@@ -323,4 +323,8 @@ persistence, see [BAUD_SELECT.md](BAUD_SELECT.md). For microSD session
 recording - mounting, the write self-test, and the SPI-peripheral
 history worth knowing before touching that code again - see
 [SD_LOGGING.md](SD_LOGGING.md). For the CLR button (and why it also
-resets autoscroll), see [CLR_BUTTON.md](CLR_BUTTON.md).
+resets autoscroll), see [CLR_BUTTON.md](CLR_BUTTON.md). For the raw
+XPT2046-to-screen-coordinate model, the `TOUCH_DEBUG_SERIAL` diagnostic,
+and the corner-tap calibration procedure - plus a case study on telling
+a real calibration problem apart from a too-small hit target - see
+[TOUCH_CALIBRATION.md](TOUCH_CALIBRATION.md).

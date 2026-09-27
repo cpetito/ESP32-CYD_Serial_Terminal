@@ -59,8 +59,10 @@ void loop() {
     needed (`TOUCH_SWAP_XY 0`, both inverts `0`) — the flags exist for a
     different panel/revision, not because this one needs them. Setting
     `TOUCH_DEBUG_SERIAL` to `1` prints raw and mapped coordinates for
-    re-deriving these on a different panel (see README's "Touch
-    calibration" section for the corner-tap procedure).
+    re-deriving these on a different panel — see
+    [TOUCH_CALIBRATION.md](TOUCH_CALIBRATION.md) for the full model,
+    the corner-tap procedure, and a case study on a symptom that looked
+    like a calibration problem but wasn't.
   - Result is `constrain()`ed to `[0, screenW_-1] x [0, screenH_-1]`
     before returning.
 
