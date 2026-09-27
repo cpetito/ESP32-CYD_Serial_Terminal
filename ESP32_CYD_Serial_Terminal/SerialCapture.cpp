@@ -3,17 +3,25 @@
 
 void SerialCapture::begin(uint32_t baudRate) {
   baudRate_ = baudRate;
+
+  // Enabled BEFORE MONITOR_UART.begin(), not after: calling pinMode()
+  // *after* begin() was tried first, on the theory that begin() might
+  // reset the pin's pull configuration - but empirically that ordering
+  // broke reception entirely (confirmed: the pull-up itself worked, no
+  // noise with nothing connected, yet real data on the same pin/wiring
+  // that a plain test sketch received fine produced nothing). The more
+  // likely explanation is the reverse: pinMode() reconfiguring the pad
+  // *after* begin() was disrupting the GPIO-matrix routing that wires
+  // this pin to UART2's RX input, since it ran last. Configuring the
+  // pull-up first and letting begin() set up the UART afterward, as the
+  // final step, avoids that. Holds the line at idle-high with nothing
+  // connected, so noise doesn't get framed as spurious start bits/bytes -
+  // see the MONITOR_RX_PIN comment in Config.h for why this pin
+  // specifically supports it.
+  pinMode(MONITOR_RX_PIN, INPUT_PULLUP);
+
   // RX-only: pass -1 for the TX pin since we never transmit on this UART.
   MONITOR_UART.begin(baudRate_, SERIAL_8N1, MONITOR_RX_PIN, -1);
-
-  // Called after begin() (not before) in case attaching the UART's RX
-  // signal to this pin resets its pad configuration - pinMode() only
-  // touches direction/pull, not the GPIO-matrix peripheral routing
-  // begin() just set up, so this is safe to layer on afterward. Holds
-  // the line at idle-high with nothing connected, so noise doesn't get
-  // framed as spurious start bits/bytes - see the MONITOR_RX_PIN comment
-  // in Config.h for why this pin specifically supports it.
-  pinMode(MONITOR_RX_PIN, INPUT_PULLUP);
 
   lineBuffer_ = "";
   haveLineStart_ = false;

@@ -29,13 +29,19 @@ void loop() {
 ## 1. Capturing bytes: `SerialCapture` (`SerialCapture.h/.cpp`)
 
 - `MONITOR_UART` (`Serial2`) is opened RX-only: `begin(baud, SERIAL_8N1, MONITOR_RX_PIN /* 22 */, -1)`.
-  Passing `-1` for TX means this UART only ever reads. `begin()` also
-  enables `MONITOR_RX_PIN`'s internal pull-up right after opening the
-  UART, so an unconnected line idles clean instead of floating and
-  occasionally having noise framed as spurious bytes — see the
-  `MONITOR_RX_PIN` comment in `Config.h` for why GPIO22 specifically
-  (a regular GPIO with real pull-up support, unlike GPIO35 used by an
-  earlier version of this sketch).
+  Passing `-1` for TX means this UART only ever reads. The pin's internal
+  pull-up (`pinMode(MONITOR_RX_PIN, INPUT_PULLUP)`) is enabled **before**
+  this call, not after — reversed from an earlier version, which called
+  `pinMode()` afterward on the theory that `begin()` might reset the
+  pin's pull configuration. That ordering broke reception entirely on
+  real hardware (confirmed: the pull-up itself worked correctly, but
+  actual data stopped arriving on a pin/wiring combination a plain test
+  sketch received fine) — the more likely mechanism is the reverse:
+  `pinMode()`, called last, was disrupting the GPIO-matrix routing that
+  wires this pin to the UART's RX input, which `begin()` had just set up.
+  See the `MONITOR_RX_PIN` comment in `Config.h` for why GPIO22
+  specifically (a regular GPIO with real pull-up support, unlike GPIO35
+  used by an earlier version of this sketch).
 - `poll()` drains up to `kMaxBytesPerPoll` (512) bytes per call via
   `available()`/`read()` — bounded so a fast/noisy source can't starve
   touch handling and rendering in the same `loop()` iteration.
