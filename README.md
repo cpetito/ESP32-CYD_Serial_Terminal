@@ -18,6 +18,9 @@ built as an Arduino IDE sketch.
 - Optional microSD session recording, toggled with the REC button
 - Each recording starts a brand-new, sequentially numbered session file
   (`/sessions/session_0001.log`, `0002`, ...)
+- Optional TX out **GPIO27**: a touch SEND menu transmits one of a small
+  set of canned messages (edit `TX_MESSAGES` in `Config.h`) to the
+  monitored device
 
 ## Hardware
 
@@ -26,6 +29,7 @@ Board: **ESP32-2432S028R** (2.8" ILI9341 320x240 + XPT2046 touch + microSD).
 | Signal              | GPIO |
 |---------------------|------|
 | Monitored serial RX | 22   |
+| Monitored serial TX (optional, SEND menu) | 27 |
 | TFT MISO / MOSI / SCLK / CS / DC / BL | 12 / 13 / 14 / 15 / 2 / 21 |
 | Touch CLK / MOSI / MISO / CS / IRQ    | 25 / 32 / 39 / 33 / 36 |
 | microSD CS / SCLK / MOSI / MISO       | 5 / 18 / 23 / 19 |
@@ -46,6 +50,15 @@ tie the grounds together. The ESP32 is **3.3V logic only** — if you're
 monitoring a 5V device (e.g. an Arduino Uno), add a level shifter or a
 resistor divider (e.g. 10kΩ/20kΩ) between its TX pin and GPIO22, or you can
 damage the input; the internal pull-up doesn't change this requirement.
+
+**Optional — sending to the monitored device:** if you also want the SEND
+menu's canned messages to reach the device, connect the CYD's **GPIO27** to
+the device's RX pin (same 3.3V-only caveat as above — a 5V device's RX pin
+still needs a divider/level shifter feeding into it from GPIO27). This wire
+is only needed if you use the SEND button; RX-only monitoring works without
+it. GPIO35 — otherwise the obvious second P3 pin — can't be used for this:
+it's one of the ESP32's four input-only pins (34/35/36/39), with no output
+driver at the silicon level, so it's physically incapable of driving TX.
 
 ## Required libraries (Arduino Library Manager)
 
@@ -117,7 +130,7 @@ generic `User_Setup.h` "will probably NOT work").
 
 ## Using it
 
-The top status bar has four touch buttons:
+The top status bar has five touch buttons:
 
 - **Baud rate** (e.g. `115200`) — opens a full-screen menu to pick a new
   baud rate; it's saved immediately and used on next boot too.
@@ -130,6 +143,12 @@ The top status bar has four touch buttons:
 - **AUTO / PAUSED** — auto-scroll indicator/toggle. Dragging the terminal
   area up/down scrolls through history and automatically pauses
   auto-scroll; tap this button (or drag back to the bottom) to resume.
+- **SEND** — opens a full-screen menu of canned messages (`TX_MESSAGES` in
+  `Config.h`); tapping one transmits it out GPIO27, followed by a CR/LF,
+  to the monitored device's RX pin. Requires the optional GPIO27 wiring
+  above — tapping a message with nothing connected is harmless, it just
+  won't be received by anything. Tapping outside every button, or the
+  Cancel bar at the bottom, closes the menu without sending.
 
 ## Why touch is bit-banged
 
@@ -312,6 +331,7 @@ ESP32_CYD_Serial_Terminal/
   DisplayUI.{h,cpp}               status bar + terminal rendering
   TouchInput.{h,cpp}              XPT2046 read (via SoftSPI) + coordinate mapping
   BaudMenu.{h,cpp}                touch baud-select overlay
+  TxMenu.{h,cpp}                  touch canned-message SEND overlay
   Settings.{h,cpp}                Preferences (baud rate, session counter)
   SDLogger.{h,cpp}                microSD session recording
   UITypes.h                       shared Rect type for hit-testing

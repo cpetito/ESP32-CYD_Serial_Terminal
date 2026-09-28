@@ -16,12 +16,13 @@ void DisplayUI::begin() {
   cols_ = terminalArea_.w / (CHAR_W * TERM_TEXT_SIZE);
   rows_ = terminalArea_.h / (CHAR_H * TERM_TEXT_SIZE);
 
-  // Four equal-ish status bar buttons across the top.
-  int16_t bw = w / 4;
-  btnBaud_       = { 0,            0, bw, STATUS_BAR_HEIGHT };
-  btnRec_        = { (int16_t)(bw * 1), 0, bw, STATUS_BAR_HEIGHT };
-  btnClear_      = { (int16_t)(bw * 2), 0, bw, STATUS_BAR_HEIGHT };
-  btnAutoscroll_ = { (int16_t)(bw * 3), 0, (int16_t)(w - bw * 3), STATUS_BAR_HEIGHT };
+  // Five equal-ish status bar buttons across the top.
+  int16_t bw = w / 5;
+  btnBaud_       = { 0,                  0, bw, STATUS_BAR_HEIGHT };
+  btnRec_        = { (int16_t)(bw * 1),  0, bw, STATUS_BAR_HEIGHT };
+  btnClear_      = { (int16_t)(bw * 2),  0, bw, STATUS_BAR_HEIGHT };
+  btnAutoscroll_ = { (int16_t)(bw * 3),  0, bw, STATUS_BAR_HEIGHT };
+  btnSend_       = { (int16_t)(bw * 4),  0, (int16_t)(w - bw * 4), STATUS_BAR_HEIGHT };
 
   terminalDirty_ = true;
   statusDirty_ = true;
@@ -44,6 +45,7 @@ void DisplayUI::drawStatusBar(uint32_t baudRate, const String &recStatus, bool r
   drawButtonLabel(tft_, btnRec_, recStatus, recording ? COLOR_BTN_BG_ACTIVE : COLOR_BTN_BG, COLOR_BTN_TEXT);
   drawButtonLabel(tft_, btnClear_, "CLR", COLOR_BTN_BG, COLOR_BTN_TEXT);
   drawButtonLabel(tft_, btnAutoscroll_, autoscroll ? "AUTO" : "PAUSED", COLOR_BTN_BG, COLOR_BTN_TEXT);
+  drawButtonLabel(tft_, btnSend_, "SEND", COLOR_BTN_BG, COLOR_BTN_TEXT);
 }
 
 void DisplayUI::drawTerminal(TermBuffer &buf) {

@@ -3,7 +3,7 @@
 // Receive-only serial monitor / logger for the ESP32-2432S028R "Cheap
 // Yellow Display" board (2.8" ILI9341 + XPT2046 touch).
 //
-// - Listens on GPIO22 (RX only, internal pull-up) for another device's TX line.
+// - Listens on GPIO22 (internal pull-up) for another device's TX line.
 // - Non-blocking capture; CR, LF or CR/LF all terminate a line.
 // - Each line is timestamped with millis() and word-wrapped on screen.
 // - Scrollable history via touch drag; touch buttons for baud selection,
@@ -11,6 +11,8 @@
 // - Baud rate is touch-selectable from a menu and persisted in Preferences.
 // - Optional session recording to a microSD card, one fresh file per
 //   recording session.
+// - Optional TX out GPIO27: a touch SEND menu transmits one of a small
+//   set of canned messages (Config.h's TX_MESSAGES) to the target device.
 //
 // See README.md for wiring notes and the required TFT_eSPI User_Setup.h.
 
@@ -22,8 +24,9 @@
 #include "DisplayUI.h"
 #include "TouchInput.h"
 #include "BaudMenu.h"
+#include "TxMenu.h"
 
-enum AppMode { MODE_TERMINAL, MODE_BAUD_MENU };
+enum AppMode { MODE_TERMINAL, MODE_BAUD_MENU, MODE_TX_MENU };
 
 static Settings settings;
 static DisplayUI display;
@@ -32,6 +35,7 @@ static SerialCapture capture;
 static TouchInput touchInput;
 static SDLogger sdLogger;
 static BaudMenu baudMenu;
+static TxMenu txMenu;
 
 static AppMode mode = MODE_TERMINAL;
 static bool recording = false;
@@ -95,6 +99,11 @@ static void handleTerminalTap(int16_t x, int16_t y) {
     display.markStatusDirty();
     return;
   }
+  if (display.btnSend().contains(x, y)) {
+    mode = MODE_TX_MENU;
+    txMenu.draw(display.tft());
+    return;
+  }
   // Tap inside the terminal area itself: no action (drag is handled
   // separately below).
 }
@@ -109,6 +118,18 @@ static void handleBaudMenuTap(int16_t x, int16_t y) {
   }
   settings.setBaudRate(sel);
   capture.setBaudRate(sel);
+  mode = MODE_TERMINAL;
+  display.markStatusDirty();
+  display.markTerminalDirty();
+}
+
+static void handleTxMenuTap(int16_t x, int16_t y) {
+  int idx = txMenu.hitTest(x, y);
+  if (idx >= 0) {
+    capture.sendLine(TX_MESSAGES[idx].text);
+  }
+  // A miss and an explicit Cancel both just close the menu - see
+  // TxMenu::hitTest()'s comment for why there's no separate sentinel.
   mode = MODE_TERMINAL;
   display.markStatusDirty();
   display.markTerminalDirty();
@@ -149,8 +170,10 @@ static void pollTouch() {
     if (!touchDragged) {
       if (mode == MODE_TERMINAL) {
         handleTerminalTap(touchDownX, touchDownY);
-      } else {
+      } else if (mode == MODE_BAUD_MENU) {
         handleBaudMenuTap(touchDownX, touchDownY);
+      } else {
+        handleTxMenuTap(touchDownX, touchDownY);
       }
     }
   }

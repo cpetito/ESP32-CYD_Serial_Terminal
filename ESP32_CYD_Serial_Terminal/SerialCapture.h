@@ -1,9 +1,10 @@
 // SerialCapture.h
-// Non-blocking reader for the monitored UART. Call poll() from loop() on
-// every pass; it drains whatever bytes are currently available without
-// ever blocking, accumulates a raw line, and reports completed lines via
-// a callback. CR, LF and CR/LF are all treated as line terminators, with
-// CR/LF collapsed into a single terminator.
+// Non-blocking reader (and simple writer) for the monitored UART. Call
+// poll() from loop() on every pass; it drains whatever bytes are
+// currently available without ever blocking, accumulates a raw line, and
+// reports completed lines via a callback. CR, LF and CR/LF are all
+// treated as line terminators, with CR/LF collapsed into a single
+// terminator.
 
 #pragma once
 
@@ -26,6 +27,13 @@ public:
   // Drains all currently-available bytes without blocking. Safe to call
   // every loop() iteration.
   void poll();
+
+  // Writes text followed by TX_LINE_ENDING out MONITOR_TX_PIN. A short
+  // canned message (a handful of characters) at any of this sketch's
+  // supported baud rates transmits well within one UART FIFO's worth of
+  // buffering, so this doesn't need to be broken up across poll() calls
+  // the way receiving is - it's fire-and-forget from the caller's side.
+  void sendLine(const char *text);
 
 private:
   uint32_t baudRate_ = DEFAULT_BAUD_RATE;

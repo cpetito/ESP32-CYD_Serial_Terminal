@@ -24,6 +24,7 @@ public:
   const Rect &btnClear() const { return btnClear_; }
   const Rect &btnRec() const { return btnRec_; }
   const Rect &btnAutoscroll() const { return btnAutoscroll_; }
+  const Rect &btnSend() const { return btnSend_; }
   const Rect &terminalArea() const { return terminalArea_; }
 
   void markTerminalDirty() { terminalDirty_ = true; }
@@ -41,7 +42,7 @@ private:
   uint16_t rows_ = 0;
 
   Rect terminalArea_;
-  Rect btnBaud_, btnClear_, btnRec_, btnAutoscroll_;
+  Rect btnBaud_, btnClear_, btnRec_, btnAutoscroll_, btnSend_;
 
   bool terminalDirty_ = true;
   bool statusDirty_ = true;

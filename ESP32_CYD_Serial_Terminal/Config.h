@@ -9,13 +9,14 @@
 #include <Arduino.h>
 
 // ---------------------------------------------------------------------------
-// Incoming (monitored) serial line
+// Monitored serial line: RX (always) + TX (optional, for the canned-message
+// SEND menu)
 // ---------------------------------------------------------------------------
 // GPIO22 is broken out to this board's P3 connector (confirmed on the
 // actual hardware, alongside 21/27/35 - 21 is used elsewhere, as the TFT
 // backlight pin) and isn't used by the TFT, touch controller or microSD
-// slot, making it a convenient RX-only pin for sniffing a target device's
-// TX line. Unlike GPIO35 (used here originally), GPIO22 is a regular
+// slot, making it a convenient RX pin for sniffing a target device's TX
+// line. Unlike GPIO35 (used here originally), GPIO22 is a regular
 // bidirectional GPIO with real internal pull-up/pull-down support, so
 // SerialCapture::begin() enables its internal pull-up: with nothing
 // connected, the line idles high (the UART's normal mark state) instead
@@ -27,8 +28,29 @@
 // (e.g. 10k/20k) between its TX pin and this pin to avoid damaging the
 // ESP32 - the internal pull-up above doesn't change that requirement.
 #define MONITOR_RX_PIN      22
+// GPIO27 is the other pin confirmed free on the P3 connector. GPIO35 -
+// otherwise the obvious second choice, since it's also on P3 and unused -
+// can NOT be used here: it's one of the ESP32's input-only pins (34/35/36/39),
+// which have no output driver at the silicon level, not just a missing
+// pull resistor. Trying to use it as TX wouldn't error, it would just
+// never actually transmit anything.
+#define MONITOR_TX_PIN      27
 #define MONITOR_UART        Serial2
 #define MONITOR_UART_NUM    2
+
+// Canned messages offered on the touch SEND menu, each transmitted out
+// MONITOR_TX_PIN followed by TX_LINE_ENDING. Add/remove/edit entries and
+// re-flash to change what's offered - there's no on-screen text entry.
+#define TX_LINE_ENDING "\r\n"
+struct TxMessage {
+  const char *label; // shown on the SEND menu's button
+  const char *text;  // sent verbatim, followed by TX_LINE_ENDING
+};
+static const TxMessage TX_MESSAGES[] = {
+  { "RESET",  "RESET"  },
+  { "STATUS", "STATUS" },
+};
+#define TX_MESSAGES_COUNT (sizeof(TX_MESSAGES) / sizeof(TX_MESSAGES[0]))
 
 // ---------------------------------------------------------------------------
 // TFT (ILI9341) - driven by the TFT_eSPI library.

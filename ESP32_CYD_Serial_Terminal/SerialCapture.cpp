@@ -20,8 +20,7 @@ void SerialCapture::begin(uint32_t baudRate) {
   // specifically supports it.
   pinMode(MONITOR_RX_PIN, INPUT_PULLUP);
 
-  // RX-only: pass -1 for the TX pin since we never transmit on this UART.
-  MONITOR_UART.begin(baudRate_, SERIAL_8N1, MONITOR_RX_PIN, -1);
+  MONITOR_UART.begin(baudRate_, SERIAL_8N1, MONITOR_RX_PIN, MONITOR_TX_PIN);
 
   lineBuffer_ = "";
   haveLineStart_ = false;
@@ -36,6 +35,12 @@ void SerialCapture::setBaudRate(uint32_t baudRate) {
   haveLineStart_ = false;
   sawCR_ = false;
   begin(baudRate);
+}
+
+void SerialCapture::sendLine(const char *text) {
+  MONITOR_UART.print(text);
+  MONITOR_UART.print(TX_LINE_ENDING);
+  Serial.printf("TX: %s%s", text, TX_LINE_ENDING);
 }
 
 void SerialCapture::finishLine() {
