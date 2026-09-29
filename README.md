@@ -358,4 +358,6 @@ a real calibration problem apart from a too-small hit target - see
 `SD OK`/`REC` mean and why that logic was never actually the bug behind
 a stale status, see [SD_STATUS_TEXT.md](SD_STATUS_TEXT.md). For the
 drag-to-scroll pixel math, direction convention, and how the result gets
-rendered, see [DRAG_SCROLL.md](DRAG_SCROLL.md).
+rendered, see [DRAG_SCROLL.md](DRAG_SCROLL.md). For the SEND menu -
+transmitting a canned message out GPIO27, and why that pin rather than
+GPIO35 - see [SEND_MESSAGE.md](SEND_MESSAGE.md).
